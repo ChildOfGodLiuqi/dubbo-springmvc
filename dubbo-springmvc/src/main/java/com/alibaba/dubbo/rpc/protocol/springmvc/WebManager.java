@@ -61,6 +61,6 @@ public class WebManager {
 			+ "function requestJson(url, data, headers) {" + "var result;" + "$.ajax({" + "type : 'post',"
 			+ "async : false," + "dataType : 'json'," + "url : url," + "data : data," + "headers : headers,"
 			+ "success : function(data) {" + "result = data;" + "}"
-			// + ",error : function(data) {" + "result = data;" + "}"
+			+ ",error : function(data) {" + "result = data;" + "}"
 			+ "});" + "return result;" + "}" + "</script>";
 }
