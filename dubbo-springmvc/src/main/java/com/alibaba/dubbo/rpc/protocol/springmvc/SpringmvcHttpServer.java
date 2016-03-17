@@ -55,8 +55,8 @@ public class SpringmvcHttpServer {
 	private DispatcherServlet dispatcher = new DispatcherServlet();
 	private HttpBinder httpBinder;
 	private HttpServer httpServer;
-	private List<String> produce = Arrays.asList("application/json;charset=utf-8", "text/xml;charset=utf-8");
-	private List<String> applicationTypes = Arrays.asList("json", "xml");
+	private List<String> produce = Arrays.asList("application/json;charset=utf-8"/*, "text/xml;charset=utf-8"*/);
+	private List<String> applicationTypes = Arrays.asList("json"/*, "xml"*/);
 	private final Map<Object, HashSet<String>> urls = new ConcurrentHashMap<Object, HashSet<String>>();
 	private final Map<Object, HashSet<RequestMappingInfo>> mappingds = new ConcurrentHashMap<Object, HashSet<RequestMappingInfo>>();
 

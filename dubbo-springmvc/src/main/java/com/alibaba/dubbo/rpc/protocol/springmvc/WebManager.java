@@ -8,9 +8,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.util.ClassUtils;
+
 public class WebManager {
 
-	private static String profix = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><script src=\"http://cdn.bootcss.com/jquery/1.11.3/jquery.min.js\"></script><link rel = \"stylesheet\" href=\"http://cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap.min.css\"><script src=\"http://cdn.bootcss.com/bootstrap/2.3.1/js/bootstrap-transition.js\"></script><script src=\"http://cdn.bootcss.com/bootstrap/2.3.1/js/bootstrap-modal.js\"></script>%s<title>Dubbo-springmvc Manager</title></head><body><div class=\"container\"><table class=\"table table-striped  table-hover\"><thead><tr><th>服务名</th><th>方法</th><th>url</th><th>操作</th></tr>";
+	private static String profix = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><script src=\"http://cdn.bootcss.com/jquery/1.11.3/jquery.min.js\"></script><link rel = \"stylesheet\" href=\"http://cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap.min.css\"><script src=\"http://cdn.bootcss.com/bootstrap/2.3.1/js/bootstrap-transition.js\"></script><script src=\"http://cdn.bootcss.com/bootstrap/2.3.1/js/bootstrap-modal.js\"></script>%s<title>Dubbo-springmvc Manager</title></head><body><div class=\"\"><table class=\"table table-striped  table-hover\"><thead><tr><th>服务名</th><th>方法</th><th>url</th><th>操作</th></tr>";
 	private static String suffix = "<tbody>%s</tbody></table></div>%s</body></html>";
 	private static String template = "<tr class=\"%s\"><td>%s</td><td>%s</td></td><td><a href=\"%s\">%s</td><td><button onclick='invokerPop(\"%s\")' class=\"btn btn-default btn-primary btn-sm\">调用</button></td></tr>";
 	private static List<String> cssTrClass = Arrays.asList("", "info");
@@ -19,11 +21,12 @@ public class WebManager {
 		String str = "";
 		int i = 1;
 		for (Object handler : mappingds.keySet()) {
+			Class<?> userClass = ClassUtils.getUserClass(handler);
 			i++;
-			String handlerName = handler.getClass().getSimpleName();
+			String handlerName = userClass.getSimpleName();
 			ArrayList<String> paths = new ArrayList<String>(mappingds.get(handler));
 			Collections.sort(paths);
-			Method[] methods = handler.getClass().getMethods();
+			Method[] methods = userClass.getMethods();
 			for (Method method : methods) {
 				for (String path : paths) {
 					String[] split = path.split("/");
