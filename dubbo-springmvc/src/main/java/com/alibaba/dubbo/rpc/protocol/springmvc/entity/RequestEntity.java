@@ -61,7 +61,7 @@ public class RequestEntity implements Serializable {
 
 		sb.append("/");
 
-		String[] split = service.split(".");
+		String[] split = service.split("[.]");
 
 		sb.append(firstLow(split[split.length - 1]));
 		sb.append("/");
