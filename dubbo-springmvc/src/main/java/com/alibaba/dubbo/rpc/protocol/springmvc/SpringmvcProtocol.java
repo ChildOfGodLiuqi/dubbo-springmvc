@@ -122,8 +122,6 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 						if (resultJson.getBoolean("isVoid")) {
 							return null;
 						}
-						Class resultType=ClassUtils.forName(resultJson.getString("resultType"));
-						String result = resultJson.getString("result");
 						return resultJson.get("result");
 					}
 				});
