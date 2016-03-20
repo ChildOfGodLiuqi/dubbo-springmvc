@@ -123,7 +123,8 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 							return null;
 						}
 						Class resultType=ClassUtils.forName(resultJson.getString("resultType"));
-						return resultJson.getObject("result", resultType);
+						String result = resultJson.getString("result");
+						return resultJson.get("result");
 					}
 				});
 	}
