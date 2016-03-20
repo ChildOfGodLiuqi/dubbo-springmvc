@@ -1,5 +1,8 @@
 package com.alibaba.dubbo.rpc.protocol.springmvc;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -7,18 +10,30 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.xml.transform.Source;
 
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.http.converter.xml.SourceHttpMessageConverter;
+import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.URL;
+import com.alibaba.dubbo.common.compiler.support.ClassUtils;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.servlet.DispatcherServlet;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.AbstractProxyProtocol;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
 
 /**
  * 
@@ -68,58 +83,60 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 	@Override
 	// 暂时不支持基于springmvc的消费
 	protected <T> T doRefer(Class<T> type, URL url) throws RpcException {
-		return null;
-		// PoolingHttpClientConnectionManager manager = new
-		// PoolingHttpClientConnectionManager();
-		// CloseableHttpClient httpClient =
-		// HttpClientBuilder.create().setConnectionManager(manager).build();
-		// HttpComponentsClientHttpRequestFactory factory = new
-		// HttpComponentsClientHttpRequestFactory(httpClient);
-		// final RestTemplate restTemplate = new RestTemplate(factory);
-		// List<HttpMessageConverter<?>> messageConverters =
-		// getHttpMessageConverters();
-		// restTemplate.setMessageConverters(messageConverters);
-		//
-		// String addr = "http://" + url.getIp() + ":" + url.getPort();
-		// String defaultGroup = url.getParameter("group", "defaultGroup");
-		// String version = url.getParameter("version", "1.0.0");
-		// String service = getShortName(url.getParameter("interface"));
-		// String contextPath = getContextPath(url);
-		// String contentType = "json";
-		//
-		// final String httpUrl = addr + "/" + contextPath + "/" + defaultGroup
-		// + "/" + version + "/" + contentType + "/"
-		// + service + "/";
-		//
-		// return (T)
-		// Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
-		// new Class[] { type },
-		// new InvocationHandler() {
-		//
-		// @Override
-		// public Object invoke(Object proxy, Method method, Object[] args)
-		// throws Throwable {
-		// String fullRequestPath = httpUrl + method.getName();
-		// Class<?> returnType = method.getReturnType();
-		// HttpHeaders headers = new HttpHeaders();
-		// headers.setContentType(MediaType.APPLICATION_JSON);
-		// HttpEntity httpEntity = new HttpEntity(JSON.toJSONBytes(args),
-		// headers);
-		// return restTemplate.postForObject(fullRequestPath, httpEntity,
-		// returnType);
-		// }
-		// });
+		PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
+		CloseableHttpClient httpClient = HttpClientBuilder.create().setConnectionManager(manager).build();
+		HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
+		final RestTemplate restTemplate = new RestTemplate(factory);
+		List<HttpMessageConverter<?>> messageConverters = getHttpMessageConverters();
+		restTemplate.setMessageConverters(messageConverters);
+
+		final String addr = "http://" + url.getIp() + ":" + url.getPort() + "/" + getContextPath(url);
+		final String group = url.getParameter("group", "defaultGroup");
+		final String version = url.getParameter("version", "0.0.0");
+		final String service = url.getParameter("interface");
+		final String contextPath = getContextPath(url);
+
+		return (T) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[] { type },
+				new InvocationHandler() {
+
+					@Override
+					public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+						Class<?>[] parameterTypes = method.getParameterTypes();
+						String[] argsType = new String[parameterTypes.length];
+						for (int i = 0; i < parameterTypes.length; i++) {
+							argsType[i] = parameterTypes[i].getName();
+						}
+						JSONObject jsonObject = new JSONObject();
+						jsonObject.put("group", group);
+						jsonObject.put("version", version);
+						jsonObject.put("service", service);
+						jsonObject.put("contextPath", contextPath);
+						jsonObject.put("args", args);
+						jsonObject.put("method", method.getName());
+						jsonObject.put("argsType", argsType);
+						Class<?> returnType = method.getReturnType();
+						HttpHeaders headers = new HttpHeaders();
+						headers.setContentType(MediaType.valueOf("application/springmvc"));
+						HttpEntity httpEntity = new HttpEntity(JSON.toJSONBytes(jsonObject), headers);
+						JSONObject resultJson = restTemplate.postForObject(addr, httpEntity, JSONObject.class);
+						if (resultJson.getBoolean("isVoid")) {
+							return null;
+						}
+						Class resultType=ClassUtils.forName(resultJson.getString("resultType"));
+						return resultJson.getObject("result", resultType);
+					}
+				});
 	}
 
 	public List<HttpMessageConverter<?>> getHttpMessageConverters() {
 		List<HttpMessageConverter<?>> messageConverters = new ArrayList<HttpMessageConverter<?>>(4);
+		messageConverters.add(new FastJsonHttpMessageConverter());
 		StringHttpMessageConverter stringHttpMessageConverter = new StringHttpMessageConverter();
 		stringHttpMessageConverter.setWriteAcceptCharset(false); // see SPR-7316
 		messageConverters.add(new ByteArrayHttpMessageConverter());
 		messageConverters.add(stringHttpMessageConverter);
 		messageConverters.add(new SourceHttpMessageConverter<Source>());
 		messageConverters.add(new AllEncompassingFormHttpMessageConverter());
-		// messageConverters.add(new FastJsonHttpMessageConverter());
 		return messageConverters;
 	}
 

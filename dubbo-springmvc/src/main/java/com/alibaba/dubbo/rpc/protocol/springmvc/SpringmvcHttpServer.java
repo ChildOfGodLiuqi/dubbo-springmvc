@@ -19,13 +19,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.ReflectionUtils.MethodFilter;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite;
@@ -37,6 +40,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.common.utils.NetUtils;
+import com.alibaba.dubbo.common.utils.StringUtils;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.HttpHandler;
 import com.alibaba.dubbo.remoting.http.HttpServer;
@@ -44,6 +48,9 @@ import com.alibaba.dubbo.remoting.http.servlet.BootstrapListener;
 import com.alibaba.dubbo.remoting.http.servlet.ServletManager;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
+import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 
 /**
  * 
@@ -55,10 +62,14 @@ public class SpringmvcHttpServer {
 	private DispatcherServlet dispatcher = new DispatcherServlet();
 	private HttpBinder httpBinder;
 	private HttpServer httpServer;
-	private List<String> produce = Arrays.asList("application/json;charset=utf-8"/*, "text/xml;charset=utf-8"*/);
-	private List<String> applicationTypes = Arrays.asList("json"/*, "xml"*/);
+
 	private final Map<Object, HashSet<String>> urls = new ConcurrentHashMap<Object, HashSet<String>>();
 	private final Map<Object, HashSet<RequestMappingInfo>> mappingds = new ConcurrentHashMap<Object, HashSet<RequestMappingInfo>>();
+	private final Map<String, HandlerMethod> handlerMethods = new ConcurrentHashMap<String, HandlerMethod>();
+
+	private List<String> produce = Arrays.asList("application/json;charset=utf-8"/* , "text/xml;charset=utf-8" */);
+	private List<String> applicationTypes = Arrays.asList("json"/* , "xml" */);
+	private final String springmvcContentType = "application/springmvc";
 
 	public SpringmvcHttpServer(HttpBinder httpBinder) {
 		this.httpBinder = httpBinder;
@@ -108,11 +119,33 @@ public class SpringmvcHttpServer {
 		public void handle(HttpServletRequest request, HttpServletResponse response)
 				throws IOException, ServletException {
 			RpcContext.getContext().setRemoteAddress(request.getRemoteAddr(), request.getRemotePort());
+
+			if (!StringUtils.isBlank(request.getContentType())) {
+				boolean isSpringmvContent = springmvcContentType.equalsIgnoreCase(request.getContentType().trim());
+				if (isSpringmvContent) {
+					byte[] requestBody = StreamUtils.copyToByteArray(request.getInputStream());
+					JSONObject jsonObject = (JSONObject) JSON.parse(requestBody);
+					RequestEntity requestEntity = new RequestEntity(jsonObject);
+					String mappingUrl = requestEntity.getMappingUrl();
+					HandlerMethod handlerMethod = handlerMethods.get(mappingUrl);
+					try {
+						JSONObject result = invokerHandler(handlerMethod, requestEntity.getArgs());
+						response.setContentType(produce.get(0));
+						response.getWriter().println(result);
+						response.flushBuffer();
+					} catch (Exception e) {
+						throw new RpcException(e);
+					}
+
+				}
+				return;
+			}
+
 			String requestURI = request.getRequestURI();
 			if ("/services".equals(requestURI)) {
 				int serverPort = request.getServerPort();
 				String hostAddress = NetUtils.getLocalAddress().getHostAddress();
-				String addr = request.getScheme() + "://" + hostAddress + ":" + serverPort + "/";
+				String addr = request.getScheme() + "://" + hostAddress + ":" + serverPort;
 				String genHtml = WebManager.genHtml(urls, addr);
 				response.setContentType("text/html;charset=utf-8");
 				response.getWriter().write(genHtml);
@@ -155,6 +188,49 @@ public class SpringmvcHttpServer {
 		}
 	}
 
+	public JSONObject invokerHandler(HandlerMethod handlerMethod, Object[] args) throws Exception {
+		Method method = getHandlerMethodBridgeMethod(handlerMethod);
+		JSONObject jsonOBject = new JSONObject();
+		args = converArgsType(args, method.getParameterTypes());
+		if (handlerMethod.isVoid()) {
+			method.invoke(handlerMethod.getBean(), args);
+			jsonOBject.put("isVoid", true);
+			return jsonOBject;
+		} else {
+			Object result = method.invoke(handlerMethod.getBean(), args);
+			if (result != null) {
+				jsonOBject.put("isVoid", false);
+				jsonOBject.put("resultType", result.getClass().getName());
+				jsonOBject.put("result", result);
+			}
+		}
+
+		return jsonOBject;
+	}
+
+	public Object[] converArgsType(Object[] args, Class[] argsType) {
+		if (args != null && args.length > 0) {
+			Object[] convertArgs = new Object[args.length];
+			for (int i = 0; i < args.length; i++) {
+				if (args[i] == null) {
+					convertArgs[i] = null;
+				} else {
+					convertArgs[i] = JSONObject.parseObject(JSONObject.toJSONString(args[i]), argsType[i]);
+				}
+				return convertArgs;
+			}
+
+		}
+		return args;
+	}
+
+	public Method getHandlerMethodBridgeMethod(HandlerMethod handlerMethod) {
+		Field bridgedMethodField = ReflectionUtils.findField(HandlerMethod.class, "bridgedMethod");
+		bridgedMethodField.setAccessible(true);
+		Method method = (Method) ReflectionUtils.getField(bridgedMethodField, handlerMethod);
+		return method;
+	}
+
 	public Set<RequestMappingInfo> getRequestMappingInfos(Object handler) throws Exception {
 		Set<Method> methods = selectMethods(handler);
 		Set<RequestMappingInfo> requestMappingInfos = new HashSet<RequestMappingInfo>();
@@ -168,6 +244,8 @@ public class SpringmvcHttpServer {
 				if (typeAnnotation != null) {
 					info = createRequestMappingInfo(typeAnnotation).combine(info);
 					requestMappingInfos.add(info);
+				} else {
+					requestMappingInfos.add(info);
 				}
 			}
 		}
@@ -179,7 +257,6 @@ public class SpringmvcHttpServer {
 		Set<String> paths = new HashSet<String>();
 		for (RequestMappingInfo requestMappingInfo : requestMappingInfos) {
 			Map<String, Object> urlMap = getRequestMappingUrlMap();
-			Map<RequestMappingInfo, Object> requestMethodHandler = getRequestMethodHandlerMap();
 			Set<String> patterns = requestMappingInfo.getPatternsCondition().getPatterns();
 			for (String pattern : patterns) {
 				Object object = urlMap.get(pattern);
@@ -210,11 +287,11 @@ public class SpringmvcHttpServer {
 		return urlMap;
 	}
 
-	public Map<RequestMappingInfo, Object> getRequestMethodHandlerMap() {
+	public Map<RequestMappingInfo, HandlerMethod> getRequestMethodHandlerMap() {
 		RequestMappingHandlerMapping requestMapping = getRequestMapping(dispatcher);
 		Field handlerMethodsFiled = ReflectionUtils.findField(RequestMappingHandlerMapping.class, "handlerMethods");
 		handlerMethodsFiled.setAccessible(true);
-		return (Map<RequestMappingInfo, Object>) ReflectionUtils.getField(handlerMethodsFiled, requestMapping);
+		return (Map<RequestMappingInfo, HandlerMethod>) ReflectionUtils.getField(handlerMethodsFiled, requestMapping);
 	}
 
 	public void registerHandler(Object handler) throws Exception {
@@ -227,7 +304,7 @@ public class SpringmvcHttpServer {
 
 	protected void detectHandlerMethods(Object type, final Object handler, URL url) throws Exception {
 		Set<Method> methods = selectMethods(handler);
-		String path = "%s%s/%s/%s/%s/%s";
+		String path = "%s%s/%s/%s/%s";
 		String serviceName = firstLow(((Class) type).getSimpleName());
 		String version = url.getParameter("version", "0.0.0");
 		String group = url.getParameter("group", "defaultGroup");
@@ -235,13 +312,13 @@ public class SpringmvcHttpServer {
 
 		HashSet<String> paths = new HashSet<String>();
 		for (Method method : methods) {
-			for (int i = 0; i < applicationTypes.size(); i++) {
-				String p = String.format(path, contextPath, group, version, applicationTypes.get(i), serviceName,
-						method.getName());
-				registerHandlerMethod(handler, method, p, new String[] { produce.get(i) });
-				paths.add(p);
-			}
+			String p = String.format(path, contextPath, group, version, serviceName, method.getName());
+			p = p.substring(0, 1).equals("/") ? p : "/" + p;
+			registerHandlerMethod(handler, method, p, new String[] { produce.get(0) });
+			paths.add(p);
 		}
+		Set<String> custemerPaths = getUrlPathsByHandler(handler);
+		paths.addAll(custemerPaths);
 		urls.put(handler, paths);
 	}
 
@@ -270,6 +347,8 @@ public class SpringmvcHttpServer {
 			mappingds.put(handler, list);
 		}
 		registerHandlerMethod(handler, method, requestMappingInfo);
+		HandlerMethod handlerMethod = getRequestMethodHandlerMap().get(requestMappingInfo);
+		handlerMethods.put(path, handlerMethod);
 	}
 
 	public void registerHandlerMethod(Object handler, Method method, RequestMappingInfo requestMappingInfo)
@@ -299,7 +378,7 @@ public class SpringmvcHttpServer {
 
 	public void removeRequestMappingInfo(Object handler) throws Exception {
 		HashSet<RequestMappingInfo> list = mappingds.get(handler);
-		Map<RequestMappingInfo, Object> requestMethodHandler = getRequestMethodHandlerMap();
+		Map<RequestMappingInfo, HandlerMethod> requestMethodHandler = getRequestMethodHandlerMap();
 		if (list != null) {
 			for (RequestMappingInfo requestMappingInfo : list) {
 				requestMethodHandler.remove(requestMappingInfo);
