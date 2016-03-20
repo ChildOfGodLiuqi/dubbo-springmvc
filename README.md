@@ -9,18 +9,15 @@
 
 	
 	默认发布地址
-		发布规则:http://ip:port:8080/组/service版本/响应格式/接口名/方法名
+		发布规则:http://ip:port:8080/组/service版本/接口名/方法名
 		
-		默认每个方法暴露出 两个url
-		json地址:http://localhost:8090/defaultGroup/1.0.0/json/userService/getById?id=1
-		
-		
-		如果想使用xml响应信息,请在dubbo-springmvc配置相关转换器 
-		xml地址:http://localhost:8090/defaultGroup/1.0.0/xml/userService/getById?id=1
+		默认每个方法暴露地址
+		地址:http://localhost:8090/defaultGroup/0.0.0/userService/getById?id=1
+
 	
 	同时也支持springmvc的注解,自定义url使用.
 	
-	可使用http://ip:port/services查看发布的url服务.
+可使用http://ip:port/services查看发布的url服务.
 	
 		
 #安装
