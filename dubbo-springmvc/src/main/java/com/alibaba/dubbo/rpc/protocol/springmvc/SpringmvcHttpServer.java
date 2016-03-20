@@ -191,7 +191,7 @@ public class SpringmvcHttpServer {
 	public JSONObject invokerHandler(HandlerMethod handlerMethod, Object[] args) throws Exception {
 		Method method = getHandlerMethodBridgeMethod(handlerMethod);
 		JSONObject jsonOBject = new JSONObject();
-		args = converArgsType(args, method.getParameterTypes());
+		args = convertArgsType(args, method.getParameterTypes());
 		if (handlerMethod.isVoid()) {
 			method.invoke(handlerMethod.getBean(), args);
 			jsonOBject.put("isVoid", true);
@@ -208,7 +208,7 @@ public class SpringmvcHttpServer {
 		return jsonOBject;
 	}
 
-	public Object[] converArgsType(Object[] args, Class[] argsType) {
+	public Object[] convertArgsType(Object[] args, Class[] argsType) {
 		if (args != null && args.length > 0) {
 			Object[] convertArgs = new Object[args.length];
 			for (int i = 0; i < args.length; i++) {

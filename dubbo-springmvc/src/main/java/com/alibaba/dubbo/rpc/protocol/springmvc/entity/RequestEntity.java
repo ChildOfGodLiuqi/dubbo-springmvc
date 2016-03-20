@@ -2,10 +2,7 @@ package com.alibaba.dubbo.rpc.protocol.springmvc.entity;
 
 import java.io.Serializable;
 
-import org.springframework.util.ClassUtils;
-
 import com.alibaba.dubbo.common.utils.StringUtils;
-import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.fastjson.JSONObject;
 
 public class RequestEntity implements Serializable {
@@ -25,7 +22,7 @@ public class RequestEntity implements Serializable {
 
 	private String method;
 
-	private Class service;
+	private String service;
 
 	private String contextPath;
 
@@ -36,15 +33,8 @@ public class RequestEntity implements Serializable {
 			this.args = jsonObject.getJSONArray("args").toArray();
 			this.setArgsType(jsonObject.getJSONArray("argsType").toArray());
 			this.method = jsonObject.getString("method");
-			String serviceClassName = jsonObject.getString("service");
+			service = jsonObject.getString("service");
 			this.contextPath = jsonObject.getString("contextPath");
-			try {
-				this.service = ClassUtils.forName(serviceClassName, ClassUtils.getDefaultClassLoader());
-			} catch (ClassNotFoundException e) {
-				throw new RpcException(e);
-			} catch (LinkageError e) {
-				throw new RpcException(e);
-			}
 		}
 	}
 
@@ -71,14 +61,16 @@ public class RequestEntity implements Serializable {
 
 		sb.append("/");
 
-		sb.append(firstLow(service.getSimpleName()));
+		String[] split = service.split(".");
+
+		sb.append(firstLow(split[split.length - 1]));
 		sb.append("/");
 
 		sb.append(method);
 
 		return sb.toString();
 	}
-	
+
 	public String firstLow(String str) {
 		return str.substring(0, 1).toLowerCase() + str.substring(1);
 	}
@@ -121,14 +113,6 @@ public class RequestEntity implements Serializable {
 
 	public void setContextPath(String contextPath) {
 		this.contextPath = contextPath;
-	}
-
-	public Class getService() {
-		return service;
-	}
-
-	public void setService(Class service) {
-		this.service = service;
 	}
 
 	public Object[] getArgsType() {
