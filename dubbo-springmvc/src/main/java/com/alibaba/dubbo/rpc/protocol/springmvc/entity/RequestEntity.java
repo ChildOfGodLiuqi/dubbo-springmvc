@@ -2,6 +2,7 @@ package com.alibaba.dubbo.rpc.protocol.springmvc.entity;
 
 import java.io.Serializable;
 
+import com.alibaba.dubbo.common.compiler.support.ClassUtils;
 import com.alibaba.dubbo.common.utils.StringUtils;
 import com.alibaba.fastjson.JSONObject;
 
@@ -18,8 +19,6 @@ public class RequestEntity implements Serializable {
 
 	private Object[] args;
 
-	private Object argsType[];
-
 	private String method;
 
 	private String service;
@@ -30,15 +29,19 @@ public class RequestEntity implements Serializable {
 		if (jsonObject != null) {
 			this.group = jsonObject.getString("group");
 			this.version = jsonObject.getString("version");
-			this.args = jsonObject.getJSONArray("args").toArray();
-			this.setArgsType(jsonObject.getJSONArray("argsType").toArray());
 			this.method = jsonObject.getString("method");
-			service = jsonObject.getString("service");
+			this.service = jsonObject.getString("service");
 			this.contextPath = jsonObject.getString("contextPath");
+			this.args = jsonObject.getJSONArray("args").toArray();
 		}
 	}
 
-	public String getMappingUrl() {
+	public RequestEntity() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+	public String mappingUrl() {
 		StringBuffer sb = new StringBuffer();
 		if (!contextPath.equals("") || !contextPath.equals("/")) {
 			sb.append(this.contextPath);
@@ -113,14 +116,6 @@ public class RequestEntity implements Serializable {
 
 	public void setContextPath(String contextPath) {
 		this.contextPath = contextPath;
-	}
-
-	public Object[] getArgsType() {
-		return argsType;
-	}
-
-	public void setArgsType(Object argsType[]) {
-		this.argsType = argsType;
 	}
 
 }

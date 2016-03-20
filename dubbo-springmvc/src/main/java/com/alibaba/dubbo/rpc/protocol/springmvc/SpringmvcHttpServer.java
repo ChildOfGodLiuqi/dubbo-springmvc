@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -19,6 +21,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.core.GenericTypeResolver;
+import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.ClassUtils;
@@ -126,7 +130,7 @@ public class SpringmvcHttpServer {
 					byte[] requestBody = StreamUtils.copyToByteArray(request.getInputStream());
 					JSONObject jsonObject = (JSONObject) JSON.parse(requestBody);
 					RequestEntity requestEntity = new RequestEntity(jsonObject);
-					String mappingUrl = requestEntity.getMappingUrl();
+					String mappingUrl = requestEntity.mappingUrl();
 					HandlerMethod handlerMethod = handlerMethods.get(mappingUrl);
 					try {
 						JSONObject result = invokerHandler(handlerMethod, requestEntity.getArgs());
@@ -190,8 +194,24 @@ public class SpringmvcHttpServer {
 
 	public JSONObject invokerHandler(HandlerMethod handlerMethod, Object[] args) throws Exception {
 		Method method = getHandlerMethodBridgeMethod(handlerMethod);
+		MethodParameter[] parameters = handlerMethod.getMethodParameters();
+		for (int i = 0; i < parameters.length; i++) {
+			if (args[i] == null) {
+				continue;
+			}
+			Class<?> parameterType = GenericTypeResolver.resolveParameterType(parameters[i],
+					handlerMethod.getBean().getClass());
+
+			if (parameterType.isAssignableFrom(List.class) || parameterType.isAssignableFrom(Set.class)) {
+				ParameterizedType genericParameterType = (ParameterizedType) parameters[i].getGenericParameterType();
+				Type type = genericParameterType.getActualTypeArguments()[0];
+				args[i] = JSONObject.parseArray(JSONObject.toJSONString(args[i]), (Class<?>) type);
+			} else {
+				args[i] = JSONObject.parseObject(JSONObject.toJSONString(args[i]), parameterType);
+			}
+		}
 		JSONObject jsonOBject = new JSONObject();
-		args = convertArgsType(args, method.getParameterTypes());
+		// args = convertArgsType(args, method.getParameterTypes());
 		if (handlerMethod.isVoid()) {
 			method.invoke(handlerMethod.getBean(), args);
 			jsonOBject.put("isVoid", true);
@@ -206,22 +226,6 @@ public class SpringmvcHttpServer {
 		}
 
 		return jsonOBject;
-	}
-
-	public Object[] convertArgsType(Object[] args, Class[] argsType) {
-		if (args != null && args.length > 0) {
-			Object[] convertArgs = new Object[args.length];
-			for (int i = 0; i < args.length; i++) {
-				if (args[i] == null) {
-					convertArgs[i] = null;
-				} else {
-					convertArgs[i] = JSONObject.parseObject(JSONObject.toJSONString(args[i]), argsType[i]);
-				}
-				return convertArgs;
-			}
-
-		}
-		return args;
 	}
 
 	public Method getHandlerMethodBridgeMethod(HandlerMethod handlerMethod) {

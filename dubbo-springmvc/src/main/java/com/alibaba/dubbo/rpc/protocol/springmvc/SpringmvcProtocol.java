@@ -114,7 +114,6 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 						jsonObject.put("args", args);
 						jsonObject.put("method", method.getName());
 						jsonObject.put("argsType", argsType);
-						Class<?> returnType = method.getReturnType();
 						HttpHeaders headers = new HttpHeaders();
 						headers.setContentType(MediaType.valueOf("application/springmvc"));
 						HttpEntity httpEntity = new HttpEntity(JSON.toJSONBytes(jsonObject), headers);
