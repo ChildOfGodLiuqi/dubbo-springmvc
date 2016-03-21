@@ -205,9 +205,9 @@ public class SpringmvcHttpServer {
 			if (parameterType.isAssignableFrom(List.class) || parameterType.isAssignableFrom(Set.class)) {
 				ParameterizedType genericParameterType = (ParameterizedType) parameters[i].getGenericParameterType();
 				Type type = genericParameterType.getActualTypeArguments()[0];
-				args[i] = JSONObject.parseArray(JSONObject.toJSONString(args[i]), (Class<?>) type);
+				args[i] = JSON.parseArray(JSONObject.toJSONString(args[i]), new Type[] { type });
 			} else {
-				args[i] = JSONObject.parseObject(JSONObject.toJSONString(args[i]), parameterType);
+				args[i] = JSON.parseObject(JSONObject.toJSONString(args[i]), parameterType);
 			}
 		}
 		JSONObject jsonOBject = new JSONObject();
