@@ -32,7 +32,9 @@ public class RequestEntity implements Serializable {
 			this.method = jsonObject.getString("method");
 			this.service = jsonObject.getString("service");
 			this.contextPath = jsonObject.getString("contextPath");
-			this.args = jsonObject.getJSONArray("args").toArray();
+			if(args!=null){
+				this.args = jsonObject.getJSONArray("args").toArray();
+			}
 		}
 	}
 

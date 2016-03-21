@@ -195,19 +195,22 @@ public class SpringmvcHttpServer {
 	public JSONObject invokerHandler(HandlerMethod handlerMethod, Object[] args) throws Exception {
 		Method method = getHandlerMethodBridgeMethod(handlerMethod);
 		MethodParameter[] parameters = handlerMethod.getMethodParameters();
-		for (int i = 0; i < parameters.length; i++) {
-			if (args[i] == null) {
-				continue;
-			}
-			Class<?> parameterType = GenericTypeResolver.resolveParameterType(parameters[i],
-					handlerMethod.getBean().getClass());
+		if (args != null && args.length > 0) {
+			for (int i = 0; i < parameters.length; i++) {
+				if (args[i] == null) {
+					continue;
+				}
+				Class<?> parameterType = GenericTypeResolver.resolveParameterType(parameters[i],
+						handlerMethod.getBean().getClass());
 
-			if (parameterType.isAssignableFrom(List.class) || parameterType.isAssignableFrom(Set.class)) {
-				ParameterizedType genericParameterType = (ParameterizedType) parameters[i].getGenericParameterType();
-				Type type = genericParameterType.getActualTypeArguments()[0];
-				args[i] = JSON.parseArray(JSONObject.toJSONString(args[i]), new Type[] { type });
-			} else {
-				args[i] = JSON.parseObject(JSONObject.toJSONString(args[i]), parameterType);
+				if (parameterType.isAssignableFrom(List.class) || parameterType.isAssignableFrom(Set.class)) {
+					ParameterizedType genericParameterType = (ParameterizedType) parameters[i]
+							.getGenericParameterType();
+					Type type = genericParameterType.getActualTypeArguments()[0];
+					args[i] = JSON.parseArray(JSONObject.toJSONString(args[i]), new Type[] { type });
+				} else {
+					args[i] = JSON.parseObject(JSONObject.toJSONString(args[i]), parameterType);
+				}
 			}
 		}
 		JSONObject jsonOBject = new JSONObject();
@@ -220,6 +223,8 @@ public class SpringmvcHttpServer {
 			Object result = method.invoke(handlerMethod.getBean(), args);
 			if (result != null) {
 				jsonOBject.put("isVoid", false);
+				MethodParameter returnType = handlerMethod.getReturnType();
+				Type type = returnType.getGenericParameterType();
 				jsonOBject.put("resultType", result.getClass().getName());
 				jsonOBject.put("result", result);
 			}
