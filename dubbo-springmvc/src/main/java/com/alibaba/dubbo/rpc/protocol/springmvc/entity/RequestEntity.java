@@ -25,14 +25,17 @@ public class RequestEntity implements Serializable {
 
 	private String contextPath;
 
-	public RequestEntity(JSONObject jsonObject) {
+	public RequestEntity(JSONObject jsonObject, String contextPath) {
 		if (jsonObject != null) {
 			this.group = jsonObject.getString("group");
 			this.version = jsonObject.getString("version");
 			this.method = jsonObject.getString("method");
 			this.service = jsonObject.getString("service");
 			this.contextPath = jsonObject.getString("contextPath");
-			if(args!=null){
+			if (contextPath == null) {
+				this.contextPath = contextPath;
+			}
+			if (args != null) {
 				this.args = jsonObject.getJSONArray("args").toArray();
 			}
 		}

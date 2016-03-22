@@ -6,7 +6,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -129,7 +128,7 @@ public class SpringmvcHttpServer {
 				if (isSpringmvContent) {
 					byte[] requestBody = StreamUtils.copyToByteArray(request.getInputStream());
 					JSONObject jsonObject = (JSONObject) JSON.parse(requestBody);
-					RequestEntity requestEntity = new RequestEntity(jsonObject);
+					RequestEntity requestEntity = new RequestEntity(jsonObject,request.getContextPath());
 					String mappingUrl = requestEntity.mappingUrl();
 					HandlerMethod handlerMethod = handlerMethods.get(mappingUrl);
 					try {
@@ -401,6 +400,7 @@ public class SpringmvcHttpServer {
 		HashSet<String> paths = urls.get(handler);
 		for (String path : paths) {
 			requestMappingUrlMap.remove(path);
+			handlerMethods.remove(path);
 		}
 		urls.remove(handler);
 	}
