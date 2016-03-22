@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import com.alibaba.dubbo.common.compiler.support.ClassUtils;
 import com.alibaba.dubbo.common.utils.StringUtils;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
 public class RequestEntity implements Serializable {
@@ -35,9 +36,11 @@ public class RequestEntity implements Serializable {
 			if (contextPath == null) {
 				this.contextPath = contextPath;
 			}
-			if (args != null) {
-				this.args = jsonObject.getJSONArray("args").toArray();
+			JSONArray jsonArray = jsonObject.getJSONArray("args");
+			if (jsonArray != null) {
+				this.args = jsonArray.toArray();
 			}
+
 		}
 	}
 
