@@ -111,7 +111,7 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 					@Override
 					public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 
-						RequestEntity requestEntity = new RequestEntity(group, version, args, method.getName(), service,
+						RequestEntity requestEntity = new RequestEntity(group, version, service, method.getName(), args,
 								contextPath);
 						HttpHeaders headers = new HttpHeaders();
 						headers.setContentType(MediaType.valueOf("application/springmvc_fastjson_bytes"));
@@ -130,8 +130,7 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 
 						};
 						restTemplate.setErrorHandler(errorHandler);
-						byte[] bytes = null;
-						bytes = restTemplate.postForObject(addr, httpEntity, byte[].class);
+						byte[] bytes = restTemplate.postForObject(addr, httpEntity, byte[].class);
 						JsonObjectInput in = new JsonObjectInput(new ByteArrayInputStream(bytes));
 						ResponseEntity responseEntity = in.readObject(ResponseEntity.class);
 						return responseEntity.getResult();

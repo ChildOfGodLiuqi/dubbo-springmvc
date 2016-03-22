@@ -37,6 +37,8 @@ import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite;
 import org.springframework.web.servlet.DispatcherServlet;
+import org.springframework.web.servlet.HandlerExecutionChain;
+import org.springframework.web.servlet.handler.MappedInterceptor;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
@@ -127,8 +129,38 @@ public class SpringmvcHttpServer {
 			RpcContext.getContext().setRemoteAddress(request.getRemoteAddr(), request.getRemotePort());
 
 			if (!StringUtils.isBlank(request.getContentType())) {
-				Object result = invoke(request, response);
-				return;
+				try {
+					String contentType = request.getContentType();
+					if ("application/springmvcJson".equalsIgnoreCase(contentType)) {
+						byte[] requestBody = StreamUtils.copyToByteArray(request.getInputStream());
+						JSONObject jsonObject = (JSONObject) JSON.parse(requestBody);
+						RequestEntity requestEntity = new RequestEntity(jsonObject, request.getContextPath());
+						response.setContentType(produce.get(0));
+						HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
+						Object[] args = handleJsonArgs(handlerMethod, requestEntity.getArgs());
+						Object result = invokerHandler(handlerMethod, args);
+						response.getWriter().println(result);
+					}
+
+					if ("application/springmvc_fastjson_bytes".equalsIgnoreCase(contentType)) {
+						JsonObjectInput in = new JsonObjectInput(request.getInputStream());
+						RequestEntity requestEntity = in.readObject(RequestEntity.class);
+						HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
+						ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
+						JsonObjectOutput out = new JsonObjectOutput(byteArrayOut, true);
+						ResponseEntity responseEntity = new ResponseEntity();
+						Object result = invokerHandler(handlerMethod, requestEntity.getArgs());
+						responseEntity.setResult(result);
+						out.writeObject(responseEntity);
+						response.setContentType("application/octet-stream;charset=utf-8");
+						response.getOutputStream().write(byteArrayOut.toByteArray());
+					}
+					response.flushBuffer();
+					return;
+				} catch (Exception e) {
+					throw new RpcException(e);
+				}
+
 			}
 
 			String requestURI = request.getRequestURI();
@@ -145,38 +177,6 @@ public class SpringmvcHttpServer {
 
 			dispatcher.service(request, response);
 		}
-	}
-
-	public Object invoke(HttpServletRequest request, HttpServletResponse response) {
-
-		RequestEntity requestEntity = null;
-		Object result = null;
-		String contentType = request.getContentType();
-		try {
-			if ("application/springmvc_fastjson_jsonObject".equalsIgnoreCase(contentType)) {
-				byte[] requestBody = StreamUtils.copyToByteArray(request.getInputStream());
-				JSONObject jsonObject = (JSONObject) JSON.parse(requestBody);
-				requestEntity = new RequestEntity(jsonObject, request.getContextPath());
-				response.setContentType(produce.get(0));
-				HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
-				result = invokerHandlerWithResultJsonObject(handlerMethod, requestEntity.getArgs());
-				response.getWriter().println(result);
-			}
-
-			if ("application/springmvc_fastjson_bytes".equalsIgnoreCase(contentType)) {
-				JsonObjectInput in = new JsonObjectInput(request.getInputStream());
-				requestEntity = in.readObject(RequestEntity.class);
-				HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
-				result = invokerHandlerWithBytes(handlerMethod, requestEntity.getArgs());
-				response.setContentType("application/octet-stream;charset=utf-8");
-				response.getOutputStream().write((byte[]) result);
-			}
-			response.flushBuffer();
-
-		} catch (Exception e) {
-			throw new RpcException(e);
-		}
-		return result;
 	}
 
 	public void start(URL url) {
@@ -210,22 +210,7 @@ public class SpringmvcHttpServer {
 		}
 	}
 
-	public byte[] invokerHandlerWithBytes(HandlerMethod handlerMethod, Object[] args) throws Exception {
-		Method method = getHandlerMethodBridgeMethod(handlerMethod);
-		Object result = method.invoke(handlerMethod.getBean(), args);
-		if (result != null) {
-			ResponseEntity responseEntity = new ResponseEntity();
-			responseEntity.setResult(result);
-			ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
-			JsonObjectOutput out = new JsonObjectOutput(byteArrayOut, true);
-			out.writeObject(responseEntity);
-			return byteArrayOut.toByteArray();
-		}
-		return null;
-	}
-
-	public JSONObject invokerHandlerWithResultJsonObject(HandlerMethod handlerMethod, Object[] args) throws Exception {
-		Method method = getHandlerMethodBridgeMethod(handlerMethod);
+	public Object[] handleJsonArgs(HandlerMethod handlerMethod, Object[] args) throws Exception {
 		MethodParameter[] parameters = handlerMethod.getMethodParameters();
 		if (args != null && args.length > 0) {
 			for (int i = 0; i < parameters.length; i++) {
@@ -235,7 +220,7 @@ public class SpringmvcHttpServer {
 				Class<?> parameterType = GenericTypeResolver.resolveParameterType(parameters[i],
 						handlerMethod.getBean().getClass());
 
-				if (parameterType.isAssignableFrom(List.class) || parameterType.isAssignableFrom(Set.class)) {
+				if (List.class.isAssignableFrom(parameterType) || Set.class.isAssignableFrom(parameterType)) {
 					ParameterizedType genericParameterType = (ParameterizedType) parameters[i]
 							.getGenericParameterType();
 					Type type = genericParameterType.getActualTypeArguments()[0];
@@ -245,30 +230,18 @@ public class SpringmvcHttpServer {
 				}
 			}
 		}
-		JSONObject jsonOBject = new JSONObject();
-		if (handlerMethod.isVoid()) {
-			method.invoke(handlerMethod.getBean(), args);
-			jsonOBject.put("isVoid", true);
-			return jsonOBject;
-		} else {
-			Object result = method.invoke(handlerMethod.getBean(), args);
-			if (result != null) {
-				jsonOBject.put("isVoid", false);
-				MethodParameter returnType = handlerMethod.getReturnType();
-				Type type = returnType.getGenericParameterType();
-				jsonOBject.put("resultType", type);
-				jsonOBject.put("result", result);
-			}
-		}
+		return args;
+	}
 
-		return jsonOBject;
+	public Object invokerHandler(HandlerMethod handlerMethod, Object[] args) throws Exception {
+		Method method = getHandlerMethodBridgeMethod(handlerMethod);
+		return method.invoke(handlerMethod.getBean(), args);
 	}
 
 	public Method getHandlerMethodBridgeMethod(HandlerMethod handlerMethod) {
 		Field bridgedMethodField = ReflectionUtils.findField(HandlerMethod.class, "bridgedMethod");
 		bridgedMethodField.setAccessible(true);
-		Method method = (Method) ReflectionUtils.getField(bridgedMethodField, handlerMethod);
-		return method;
+		return (Method) ReflectionUtils.getField(bridgedMethodField, handlerMethod);
 	}
 
 	public Set<RequestMappingInfo> getRequestMappingInfos(Object handler) throws Exception {
@@ -329,9 +302,7 @@ public class SpringmvcHttpServer {
 
 	public Map<RequestMappingInfo, HandlerMethod> getRequestMethodHandlerMap() {
 		RequestMappingHandlerMapping requestMapping = getRequestMapping(dispatcher);
-		Field handlerMethodsFiled = ReflectionUtils.findField(RequestMappingHandlerMapping.class, "handlerMethods");
-		handlerMethodsFiled.setAccessible(true);
-		return (Map<RequestMappingInfo, HandlerMethod>) ReflectionUtils.getField(handlerMethodsFiled, requestMapping);
+		return requestMapping.getHandlerMethods();
 	}
 
 	public void registerHandler(Object handler) throws Exception {
@@ -487,6 +458,7 @@ public class SpringmvcHttpServer {
 	public RequestMappingHandlerAdapter getRequestMappingHandlerAdapter(DispatcherServlet dispatcherServlet) {
 		return dispatcherServlet.getWebApplicationContext().getBean(RequestMappingHandlerAdapter.class);
 	}
+
 
 	public RequestMapping createRequestMappingAno(final RequestMapping requestMapping, final String requestPath,
 			final String[] produce) {

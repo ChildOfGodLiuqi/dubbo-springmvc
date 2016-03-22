@@ -2,7 +2,6 @@ package com.alibaba.dubbo.rpc.protocol.springmvc.entity;
 
 import java.io.Serializable;
 
-import com.alibaba.dubbo.common.compiler.support.ClassUtils;
 import com.alibaba.dubbo.common.utils.StringUtils;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -22,7 +21,7 @@ public class RequestEntity implements Serializable {
 
 	private String method;
 
-	private String serviceName;
+	private String service;
 
 	private String contextPath;
 
@@ -31,7 +30,7 @@ public class RequestEntity implements Serializable {
 			this.group = jsonObject.getString("group");
 			this.version = jsonObject.getString("version");
 			this.method = jsonObject.getString("method");
-			this.serviceName = jsonObject.getString("service");
+			this.service = jsonObject.getString("service");
 			this.contextPath = jsonObject.getString("contextPath");
 			if (contextPath == null) {
 				this.contextPath = contextPath;
@@ -49,19 +48,22 @@ public class RequestEntity implements Serializable {
 		// TODO Auto-generated constructor stub
 	}
 
-	public RequestEntity(String group, String version, Object[] args, String method, String service,
+	public RequestEntity(String group, String version, String service, String method, Object[] args,
 			String contextPath) {
 		super();
 		this.group = group;
 		this.version = version;
 		this.args = args;
 		this.method = method;
-		this.serviceName = service;
+		this.service = service;
 		this.contextPath = contextPath;
 	}
 
 	public String mappingUrl() {
 		StringBuffer sb = new StringBuffer();
+		if (contextPath == null) {
+			this.contextPath = "";
+		}
 		if (!contextPath.equals("") || !contextPath.equals("/")) {
 			sb.append(this.contextPath);
 			sb.append("/");
@@ -83,7 +85,7 @@ public class RequestEntity implements Serializable {
 
 		sb.append("/");
 
-		String[] split = this.serviceName.split("[.]");
+		String[] split = this.service.split("[.]");
 
 		sb.append(firstLow(split[split.length - 1]));
 		sb.append("/");
@@ -137,12 +139,12 @@ public class RequestEntity implements Serializable {
 		this.contextPath = contextPath;
 	}
 
-	public String getServiceName() {
-		return serviceName;
+	public String getService() {
+		return service;
 	}
 
-	public void setServiceName(String serviceName) {
-		this.serviceName = serviceName;
+	public void setService(String service) {
+		this.service = service;
 	}
 
 }
