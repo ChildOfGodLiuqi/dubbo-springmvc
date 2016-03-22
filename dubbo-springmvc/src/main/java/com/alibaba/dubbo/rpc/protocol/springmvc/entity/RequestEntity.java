@@ -22,7 +22,7 @@ public class RequestEntity implements Serializable {
 
 	private String method;
 
-	private String service;
+	private String serviceName;
 
 	private String contextPath;
 
@@ -31,7 +31,7 @@ public class RequestEntity implements Serializable {
 			this.group = jsonObject.getString("group");
 			this.version = jsonObject.getString("version");
 			this.method = jsonObject.getString("method");
-			this.service = jsonObject.getString("service");
+			this.serviceName = jsonObject.getString("service");
 			this.contextPath = jsonObject.getString("contextPath");
 			if (contextPath == null) {
 				this.contextPath = contextPath;
@@ -47,6 +47,17 @@ public class RequestEntity implements Serializable {
 	public RequestEntity() {
 		super();
 		// TODO Auto-generated constructor stub
+	}
+
+	public RequestEntity(String group, String version, Object[] args, String method, String service,
+			String contextPath) {
+		super();
+		this.group = group;
+		this.version = version;
+		this.args = args;
+		this.method = method;
+		this.serviceName = service;
+		this.contextPath = contextPath;
 	}
 
 	public String mappingUrl() {
@@ -72,7 +83,7 @@ public class RequestEntity implements Serializable {
 
 		sb.append("/");
 
-		String[] split = service.split("[.]");
+		String[] split = this.serviceName.split("[.]");
 
 		sb.append(firstLow(split[split.length - 1]));
 		sb.append("/");
@@ -124,6 +135,14 @@ public class RequestEntity implements Serializable {
 
 	public void setContextPath(String contextPath) {
 		this.contextPath = contextPath;
+	}
+
+	public String getServiceName() {
+		return serviceName;
+	}
+
+	public void setServiceName(String serviceName) {
+		this.serviceName = serviceName;
 	}
 
 }

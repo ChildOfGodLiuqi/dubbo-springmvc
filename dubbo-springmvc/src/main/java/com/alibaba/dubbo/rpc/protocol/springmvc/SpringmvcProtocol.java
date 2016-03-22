@@ -1,5 +1,7 @@
 package com.alibaba.dubbo.rpc.protocol.springmvc;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -26,13 +28,14 @@ import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.URL;
-import com.alibaba.dubbo.common.compiler.support.ClassUtils;
+import com.alibaba.dubbo.common.serialize.support.json.JsonObjectInput;
+import com.alibaba.dubbo.common.serialize.support.json.JsonObjectOutput;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.servlet.DispatcherServlet;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.AbstractProxyProtocol;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
+import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
 import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
 
 /**
@@ -101,33 +104,26 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 
 					@Override
 					public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-						Class<?>[] parameterTypes = method.getParameterTypes();
-						String[] argsType = new String[parameterTypes.length];
-						for (int i = 0; i < parameterTypes.length; i++) {
-							argsType[i] = parameterTypes[i].getName();
-						}
-						JSONObject jsonObject = new JSONObject();
-						jsonObject.put("group", group);
-						jsonObject.put("version", version);
-						jsonObject.put("service", service);
-						jsonObject.put("contextPath", contextPath);
-						jsonObject.put("args", args);
-						jsonObject.put("method", method.getName());
-						jsonObject.put("argsType", argsType);
+
+						RequestEntity requestEntity = new RequestEntity(group, version, args, method.getName(), service,
+								contextPath);
 						HttpHeaders headers = new HttpHeaders();
-						headers.setContentType(MediaType.valueOf("application/springmvc"));
-						HttpEntity httpEntity = new HttpEntity(JSON.toJSONBytes(jsonObject), headers);
-						JSONObject resultJson = restTemplate.postForObject(addr, httpEntity, JSONObject.class);
-						if (resultJson.getBoolean("isVoid")) {
-							return null;
-						}
-						return resultJson.get("result");
+						headers.setContentType(MediaType.valueOf("application/springmvc_fastjson_bytes"));
+						ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
+						JsonObjectOutput out = new JsonObjectOutput(byteArrayOut, true);
+						out.writeObject(requestEntity);
+						HttpEntity httpEntity = new HttpEntity(byteArrayOut.toByteArray(), headers);
+						byte[] bytes = restTemplate.postForObject(addr, httpEntity,
+								byte[].class);
+						JsonObjectInput in=new JsonObjectInput(new ByteArrayInputStream(bytes));
+						ResponseEntity responseEntity = in.readObject(ResponseEntity.class);
+						return responseEntity.getResult();
 					}
 				});
 	}
 
 	public List<HttpMessageConverter<?>> getHttpMessageConverters() {
-		List<HttpMessageConverter<?>> messageConverters = new ArrayList<HttpMessageConverter<?>>(4);
+		List<HttpMessageConverter<?>> messageConverters = new ArrayList<HttpMessageConverter<?>>(6);
 		messageConverters.add(new FastJsonHttpMessageConverter());
 		StringHttpMessageConverter stringHttpMessageConverter = new StringHttpMessageConverter();
 		stringHttpMessageConverter.setWriteAcceptCharset(false); // see SPR-7316

@@ -1,8 +1,10 @@
 package com.alibaba.dubbo.rpc.protocol.springmvc;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -42,6 +44,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import com.alibaba.dubbo.common.URL;
+import com.alibaba.dubbo.common.serialize.support.json.JsonObjectInput;
+import com.alibaba.dubbo.common.serialize.support.json.JsonObjectOutput;
 import com.alibaba.dubbo.common.utils.NetUtils;
 import com.alibaba.dubbo.common.utils.StringUtils;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
@@ -52,6 +56,7 @@ import com.alibaba.dubbo.remoting.http.servlet.ServletManager;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
+import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 
@@ -72,7 +77,6 @@ public class SpringmvcHttpServer {
 
 	private List<String> produce = Arrays.asList("application/json;charset=utf-8"/* , "text/xml;charset=utf-8" */);
 	private List<String> applicationTypes = Arrays.asList("json"/* , "xml" */);
-	private final String springmvcContentType = "application/springmvc";
 
 	public SpringmvcHttpServer(HttpBinder httpBinder) {
 		this.httpBinder = httpBinder;
@@ -124,23 +128,7 @@ public class SpringmvcHttpServer {
 			RpcContext.getContext().setRemoteAddress(request.getRemoteAddr(), request.getRemotePort());
 
 			if (!StringUtils.isBlank(request.getContentType())) {
-				boolean isSpringmvContent = springmvcContentType.equalsIgnoreCase(request.getContentType().trim());
-				if (isSpringmvContent) {
-					byte[] requestBody = StreamUtils.copyToByteArray(request.getInputStream());
-					JSONObject jsonObject = (JSONObject) JSON.parse(requestBody);
-					RequestEntity requestEntity = new RequestEntity(jsonObject,request.getContextPath());
-					String mappingUrl = requestEntity.mappingUrl();
-					HandlerMethod handlerMethod = handlerMethods.get(mappingUrl);
-					try {
-						JSONObject result = invokerHandler(handlerMethod, requestEntity.getArgs());
-						response.setContentType(produce.get(0));
-						response.getWriter().println(result);
-						response.flushBuffer();
-					} catch (Exception e) {
-						throw new RpcException(e);
-					}
-
-				}
+				Object result = invoke(request, response);
 				return;
 			}
 
@@ -158,6 +146,38 @@ public class SpringmvcHttpServer {
 
 			dispatcher.service(request, response);
 		}
+	}
+
+	public Object invoke(HttpServletRequest request, HttpServletResponse response) {
+
+		RequestEntity requestEntity = null;
+		Object result = null;
+		String contentType = request.getContentType();
+		try {
+			if ("application/springmvc_fastjson_jsonObject".equalsIgnoreCase(contentType)) {
+				byte[] requestBody = StreamUtils.copyToByteArray(request.getInputStream());
+				JSONObject jsonObject = (JSONObject) JSON.parse(requestBody);
+				requestEntity = new RequestEntity(jsonObject, request.getContextPath());
+				response.setContentType(produce.get(0));
+				HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
+				result = invokerHandlerWithResultJsonObject(handlerMethod, requestEntity.getArgs());
+				response.getWriter().println(result);
+			}
+
+			if ("application/springmvc_fastjson_bytes".equalsIgnoreCase(contentType)) {
+				JsonObjectInput in = new JsonObjectInput(request.getInputStream());
+				requestEntity = in.readObject(RequestEntity.class);
+				HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
+				result = invokerHandlerWithBytes(handlerMethod, requestEntity.getArgs());
+				response.setContentType("application/octet-stream;charset=utf-8");
+				response.getOutputStream().write((byte[]) result);
+			}
+			response.flushBuffer();
+
+		} catch (Exception e) {
+			throw new RpcException(e);
+		}
+		return result;
 	}
 
 	public void start(URL url) {
@@ -191,7 +211,21 @@ public class SpringmvcHttpServer {
 		}
 	}
 
-	public JSONObject invokerHandler(HandlerMethod handlerMethod, Object[] args) throws Exception {
+	public byte[] invokerHandlerWithBytes(HandlerMethod handlerMethod, Object[] args) throws Exception {
+		Method method = getHandlerMethodBridgeMethod(handlerMethod);
+		Object result = method.invoke(handlerMethod.getBean(), args);
+		if (result != null) {
+			ResponseEntity responseEntity = new ResponseEntity();
+			responseEntity.setResult(result);
+			ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
+			JsonObjectOutput out = new JsonObjectOutput(byteArrayOut, true);
+			out.writeObject(responseEntity);
+			return byteArrayOut.toByteArray();
+		}
+		return null;
+	}
+
+	public JSONObject invokerHandlerWithResultJsonObject(HandlerMethod handlerMethod, Object[] args) throws Exception {
 		Method method = getHandlerMethodBridgeMethod(handlerMethod);
 		MethodParameter[] parameters = handlerMethod.getMethodParameters();
 		if (args != null && args.length > 0) {
@@ -213,7 +247,6 @@ public class SpringmvcHttpServer {
 			}
 		}
 		JSONObject jsonOBject = new JSONObject();
-		// args = convertArgsType(args, method.getParameterTypes());
 		if (handlerMethod.isVoid()) {
 			method.invoke(handlerMethod.getBean(), args);
 			jsonOBject.put("isVoid", true);
@@ -224,7 +257,7 @@ public class SpringmvcHttpServer {
 				jsonOBject.put("isVoid", false);
 				MethodParameter returnType = handlerMethod.getReturnType();
 				Type type = returnType.getGenericParameterType();
-				jsonOBject.put("resultType", result.getClass().getName());
+				jsonOBject.put("resultType", type);
 				jsonOBject.put("result", result);
 			}
 		}
