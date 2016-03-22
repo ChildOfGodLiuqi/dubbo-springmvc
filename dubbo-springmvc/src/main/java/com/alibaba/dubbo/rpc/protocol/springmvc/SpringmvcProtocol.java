@@ -2,9 +2,11 @@ package com.alibaba.dubbo.rpc.protocol.springmvc;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,12 +20,16 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.http.converter.xml.SourceHttpMessageConverter;
+import org.springframework.util.StreamUtils;
+import org.springframework.web.client.DefaultResponseErrorHandler;
+import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.dubbo.common.Constants;
@@ -113,9 +119,20 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 						JsonObjectOutput out = new JsonObjectOutput(byteArrayOut, true);
 						out.writeObject(requestEntity);
 						HttpEntity httpEntity = new HttpEntity(byteArrayOut.toByteArray(), headers);
-						byte[] bytes = restTemplate.postForObject(addr, httpEntity,
-								byte[].class);
-						JsonObjectInput in=new JsonObjectInput(new ByteArrayInputStream(bytes));
+						ResponseErrorHandler errorHandler = new DefaultResponseErrorHandler() {
+
+							@Override
+							public void handleError(ClientHttpResponse response) throws IOException {
+								String copyToString = StreamUtils.copyToString(response.getBody(),
+										Charset.forName("utf-8"));
+								throw new RpcException(response.getStatusCode().value(), copyToString);
+							}
+
+						};
+						restTemplate.setErrorHandler(errorHandler);
+						byte[] bytes = null;
+						bytes = restTemplate.postForObject(addr, httpEntity, byte[].class);
+						JsonObjectInput in = new JsonObjectInput(new ByteArrayInputStream(bytes));
 						ResponseEntity responseEntity = in.readObject(ResponseEntity.class);
 						return responseEntity.getResult();
 					}
