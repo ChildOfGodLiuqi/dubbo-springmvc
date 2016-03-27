@@ -54,8 +54,6 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 
 	private final Map<String, SpringmvcHttpServer> servers = new ConcurrentHashMap<String, SpringmvcHttpServer>();
 
-	private final Map<String, DispatcherServlet> dispatcherServlets = new ConcurrentHashMap<String, DispatcherServlet>();
-
 	private final SpringmvcServerFactory serverFactory = new SpringmvcServerFactory();
 
 	@Override
@@ -150,13 +148,6 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 		return messageConverters;
 	}
 
-	public String getShortName(String str) {
-		return firstLow(str.split("[.]")[str.split("[.]").length - 1]);
-	}
-
-	public String firstLow(String str) {
-		return str.substring(0, 1).toLowerCase() + str.substring(1);
-	}
 
 	protected String getContextPath(URL url) {
 		int pos = url.getPath().lastIndexOf("/");
