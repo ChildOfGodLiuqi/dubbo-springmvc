@@ -451,6 +451,9 @@ public class SpringmvcHttpServer {
 		RequestMappingHandlerAdapter adapter = getRequestMappingHandlerAdapter(dispatcher);
 		Field responseBodyAdviceField = ReflectionUtils.findField(RequestMappingHandlerAdapter.class,
 				"responseBodyAdvice");
+		if(responseBodyAdviceField==null){
+			return null;
+		}
 		responseBodyAdviceField.setAccessible(true);
 		return (List<Object>) ReflectionUtils.getField(responseBodyAdviceField, adapter);
 	}
@@ -503,6 +506,11 @@ public class SpringmvcHttpServer {
 			public String[] produces() {
 				return produce != null ? produce
 						: (requestMapping != null ? requestMapping.produces() : new String[] {});
+			}
+
+			@Override
+			public String[] path() {
+				return new String[] { requestPath };
 			}
 		};
 	}
