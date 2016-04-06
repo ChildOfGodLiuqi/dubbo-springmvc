@@ -9,6 +9,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -295,6 +296,9 @@ public class SpringmvcHttpServer {
 	public Map<String, Object> getRequestMappingUrlMap() {
 		RequestMappingHandlerMapping requestMapping = getRequestMapping(dispatcher);
 		Field urlMapFiled = ReflectionUtils.findField(RequestMappingHandlerMapping.class, "urlMap");
+		if(urlMapFiled==null){
+			return new HashMap<String,Object>();
+		}
 		urlMapFiled.setAccessible(true);
 		Map<String, Object> urlMap = (Map<String, Object>) ReflectionUtils.getField(urlMapFiled, requestMapping);
 		return urlMap;
@@ -338,7 +342,6 @@ public class SpringmvcHttpServer {
 		final Class<?> userType = ClassUtils.getUserClass(handlerType);
 		Set<Method> methods = HandlerMethodSelector.selectMethods(userType, new MethodFilter() {
 
-			@Override
 			public boolean matches(Method method) {
 				return true;
 			}
@@ -508,7 +511,6 @@ public class SpringmvcHttpServer {
 						: (requestMapping != null ? requestMapping.produces() : new String[] {});
 			}
 
-			@Override
 			public String[] path() {
 				return new String[] { requestPath };
 			}
