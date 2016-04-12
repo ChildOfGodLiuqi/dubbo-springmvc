@@ -7,7 +7,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,8 +37,6 @@ import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite;
 import org.springframework.web.servlet.DispatcherServlet;
-import org.springframework.web.servlet.HandlerExecutionChain;
-import org.springframework.web.servlet.handler.MappedInterceptor;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
@@ -48,7 +45,6 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.common.serialize.support.json.JsonObjectInput;
 import com.alibaba.dubbo.common.serialize.support.json.JsonObjectOutput;
-import com.alibaba.dubbo.common.utils.NetUtils;
 import com.alibaba.dubbo.common.utils.StringUtils;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.HttpHandler;
@@ -77,8 +73,7 @@ public class SpringmvcHttpServer {
 	private final Map<Object, HashSet<RequestMappingInfo>> mappingds = new ConcurrentHashMap<Object, HashSet<RequestMappingInfo>>();
 	private final Map<String, HandlerMethod> handlerMethods = new ConcurrentHashMap<String, HandlerMethod>();
 
-	private List<String> produce = Arrays.asList("application/json;charset=utf-8"/* , "text/xml;charset=utf-8" */);
-	private List<String> applicationTypes = Arrays.asList("json"/* , "xml" */);
+	private final String JSON_TYPE = "application/json;charset=utf-8";
 
 	public SpringmvcHttpServer(HttpBinder httpBinder) {
 		this.httpBinder = httpBinder;
@@ -106,7 +101,8 @@ public class SpringmvcHttpServer {
 			dispatcher.init(new SimpleServletConfig(servletContext));
 			// 注册ResponseBodyWrap,免除ResponseBody注解
 			registerResponseBodyWrap();
-		} catch (ServletException e) {
+			registerHandler(new WebManager(urls));
+		} catch (Exception e) {
 			throw new RpcException(e);
 		}
 	}
@@ -136,11 +132,12 @@ public class SpringmvcHttpServer {
 						byte[] requestBody = StreamUtils.copyToByteArray(request.getInputStream());
 						JSONObject jsonObject = (JSONObject) JSON.parse(requestBody);
 						RequestEntity requestEntity = new RequestEntity(jsonObject, request.getContextPath());
-						response.setContentType(produce.get(0));
+						response.setContentType(JSON_TYPE);
 						HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
 						Object[] args = handleJsonArgs(handlerMethod, requestEntity.getArgs());
 						Object result = invokerHandler(handlerMethod, args);
 						response.getWriter().println(result);
+						response.flushBuffer();
 					}
 
 					if ("application/springmvc_fastjson_bytes".equalsIgnoreCase(contentType)) {
@@ -155,25 +152,12 @@ public class SpringmvcHttpServer {
 						out.writeObject(responseEntity);
 						response.setContentType("application/octet-stream;charset=utf-8");
 						response.getOutputStream().write(byteArrayOut.toByteArray());
+						response.flushBuffer();
 					}
-					response.flushBuffer();
-					return;
 				} catch (Exception e) {
 					throw new RpcException(e);
 				}
 
-			}
-
-			String requestURI = request.getRequestURI();
-			if ("/services".equals(requestURI)) {
-				int serverPort = request.getServerPort();
-				String hostAddress = NetUtils.getLocalAddress().getHostAddress();
-				String addr = request.getScheme() + "://" + hostAddress + ":" + serverPort;
-				String genHtml = WebManager.genHtml(urls, addr);
-				response.setContentType("text/html;charset=utf-8");
-				response.getWriter().write(genHtml);
-				response.flushBuffer();
-				return;
 			}
 
 			dispatcher.service(request, response);
@@ -296,8 +280,8 @@ public class SpringmvcHttpServer {
 	public Map<String, Object> getRequestMappingUrlMap() {
 		RequestMappingHandlerMapping requestMapping = getRequestMapping(dispatcher);
 		Field urlMapFiled = ReflectionUtils.findField(RequestMappingHandlerMapping.class, "urlMap");
-		if(urlMapFiled==null){
-			return new HashMap<String,Object>();
+		if (urlMapFiled == null) {
+			return new HashMap<String, Object>();
 		}
 		urlMapFiled.setAccessible(true);
 		Map<String, Object> urlMap = (Map<String, Object>) ReflectionUtils.getField(urlMapFiled, requestMapping);
@@ -329,7 +313,7 @@ public class SpringmvcHttpServer {
 		for (Method method : methods) {
 			String p = String.format(path, contextPath, group, version, serviceName, method.getName());
 			p = p.substring(0, 1).equals("/") ? p : "/" + p;
-			registerHandlerMethod(handler, method, p, new String[] { produce.get(0) });
+			registerHandlerMethod(handler, method, p, new String[] { JSON_TYPE });
 			paths.add(p);
 		}
 		Set<String> custemerPaths = getUrlPathsByHandler(handler);
@@ -454,7 +438,7 @@ public class SpringmvcHttpServer {
 		RequestMappingHandlerAdapter adapter = getRequestMappingHandlerAdapter(dispatcher);
 		Field responseBodyAdviceField = ReflectionUtils.findField(RequestMappingHandlerAdapter.class,
 				"responseBodyAdvice");
-		if(responseBodyAdviceField==null){
+		if (responseBodyAdviceField == null) {
 			return null;
 		}
 		responseBodyAdviceField.setAccessible(true);
@@ -464,7 +448,6 @@ public class SpringmvcHttpServer {
 	public RequestMappingHandlerAdapter getRequestMappingHandlerAdapter(DispatcherServlet dispatcherServlet) {
 		return dispatcherServlet.getWebApplicationContext().getBean(RequestMappingHandlerAdapter.class);
 	}
-
 
 	public RequestMapping createRequestMappingAno(final RequestMapping requestMapping, final String requestPath,
 			final String[] produce) {
