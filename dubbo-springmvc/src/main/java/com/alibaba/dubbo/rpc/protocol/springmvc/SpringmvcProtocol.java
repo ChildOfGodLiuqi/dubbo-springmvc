@@ -68,7 +68,7 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 		if (server == null) {
 			if (server == null) {
 				server = serverFactory.createServer(url.getParameter(Constants.SERVER_KEY, "jetty9"));
-				server.start(url);
+				server.start(url,type);
 				servers.put(addr, server);
 			}
 		}

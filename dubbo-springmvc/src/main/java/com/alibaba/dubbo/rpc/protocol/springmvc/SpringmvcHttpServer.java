@@ -1,8 +1,6 @@
 package com.alibaba.dubbo.rpc.protocol.springmvc;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -17,20 +15,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.ReflectionUtils.MethodFilter;
-import org.springframework.util.StreamUtils;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.context.support.WebApplicationContextUtils;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.support.XmlWebApplicationContext;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
@@ -41,7 +39,6 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import com.alibaba.com.caucho.hessian.io.Hessian2Input;
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.HttpHandler;
@@ -50,7 +47,6 @@ import com.alibaba.dubbo.remoting.http.servlet.BootstrapListener;
 import com.alibaba.dubbo.remoting.http.servlet.ServletManager;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
-import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
 import com.alibaba.dubbo.rpc.protocol.springmvc.message.DubboJSONObjectHttpMessageConverter;
 import com.alibaba.dubbo.rpc.protocol.springmvc.message.HessainHttpMessageConverter;
 
@@ -80,7 +76,7 @@ public class SpringmvcHttpServer {
 		httpServer.close();
 	}
 
-	protected void doStart(URL url) {
+	protected void doStart(URL url,Class clazz) {
 		httpServer = httpBinder.bind(url, new SpringmvcHandler());
 
 		ServletContext servletContext = ServletManager.getInstance().getServletContext(url.getPort());
@@ -95,6 +91,9 @@ public class SpringmvcHttpServer {
 
 		try {
 			dispatcher.init(new SimpleServletConfig(servletContext));
+			//XmlWebApplicationContext webApplicationContext = (XmlWebApplicationContext) dispatcher.getWebApplicationContext();
+			//ApplicationContext parent = SpringUtil.getApplicationContext(clazz);
+			//webApplicationContext.setParent(parent);
 			// 注册ResponseBodyWrap,免除ResponseBody注解
 			registerResponseBodyWrap();
 			// 注册服务网页管理器
@@ -126,8 +125,8 @@ public class SpringmvcHttpServer {
 		}
 	}
 
-	public void start(URL url) {
-		doStart(url);
+	public void start(URL url,Class type) {
+		doStart(url, type);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -155,6 +154,13 @@ public class SpringmvcHttpServer {
 			} catch (Exception e) {
 			}
 		}
+	}
+	
+	public WebApplicationContext createWebApplicationContext(ApplicationContext parent) throws Exception{
+		Method createWebApplicationContext = ReflectionUtils.findMethod(DispatcherServlet.class, "createWebApplicationContext",
+				ApplicationContext.class);
+		createWebApplicationContext.setAccessible(true);
+		return (WebApplicationContext) createWebApplicationContext.invoke(dispatcher, parent);
 	}
 
 	public Set<RequestMappingInfo> getRequestMappingInfos(Object handler) throws Exception {
@@ -466,5 +472,6 @@ public class SpringmvcHttpServer {
 	public String firstLow(String str) {
 		return str.substring(0, 1).toLowerCase() + str.substring(1);
 	}
+
 
 }

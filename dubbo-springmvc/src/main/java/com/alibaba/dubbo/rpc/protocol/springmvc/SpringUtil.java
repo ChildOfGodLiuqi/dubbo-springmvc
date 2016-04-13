@@ -74,4 +74,15 @@ public class SpringUtil {
 		return beans;
 	}
 
+	public static <T> ApplicationContext getApplicationContext(Class<T> type) {
+		Set<ApplicationContext> contexts = getApplicationContexts();
+		for (ApplicationContext context : contexts) {
+			String[] beanNames = context.getBeanNamesForType(type);
+			if (beanNames != null) {
+				return context;
+			}
+		}
+		return null;
+	}
+
 }
