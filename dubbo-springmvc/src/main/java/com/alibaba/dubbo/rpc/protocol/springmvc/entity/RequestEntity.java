@@ -24,6 +24,8 @@ public class RequestEntity implements Serializable {
 	private String service;
 
 	private String contextPath;
+	
+	private Object result;
 
 	public RequestEntity(JSONObject jsonObject, String contextPath) {
 		if (jsonObject != null) {
@@ -145,6 +147,14 @@ public class RequestEntity implements Serializable {
 
 	public void setService(String service) {
 		this.service = service;
+	}
+
+	public Object getResult() {
+		return result;
+	}
+
+	public void setResult(Object result) {
+		this.result = result;
 	}
 
 }

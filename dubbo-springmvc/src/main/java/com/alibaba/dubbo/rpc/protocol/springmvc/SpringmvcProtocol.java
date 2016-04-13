@@ -1,7 +1,5 @@
 package com.alibaba.dubbo.rpc.protocol.springmvc;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -34,14 +32,12 @@ import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.URL;
-import com.alibaba.dubbo.common.serialize.support.json.JsonObjectInput;
-import com.alibaba.dubbo.common.serialize.support.json.JsonObjectOutput;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
-import com.alibaba.dubbo.remoting.http.servlet.DispatcherServlet;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.AbstractProxyProtocol;
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
-import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
+import com.alibaba.dubbo.rpc.protocol.springmvc.message.DubboJSONObjectHttpMessageConverter;
+import com.alibaba.dubbo.rpc.protocol.springmvc.message.HessainHttpMessageConverter;
 import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
 
 /**
@@ -112,11 +108,8 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 						RequestEntity requestEntity = new RequestEntity(group, version, service, method.getName(), args,
 								contextPath);
 						HttpHeaders headers = new HttpHeaders();
-						headers.setContentType(MediaType.valueOf("application/springmvc_fastjson_bytes"));
-						ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
-						JsonObjectOutput out = new JsonObjectOutput(byteArrayOut, true);
-						out.writeObject(requestEntity);
-						HttpEntity httpEntity = new HttpEntity(byteArrayOut.toByteArray(), headers);
+						headers.setContentType(new MediaType("application", "hessain2"));
+						HttpEntity httpEntity = new HttpEntity(requestEntity, headers);
 						ResponseErrorHandler errorHandler = new DefaultResponseErrorHandler() {
 
 							@Override
@@ -128,16 +121,16 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 
 						};
 						restTemplate.setErrorHandler(errorHandler);
-						byte[] bytes = restTemplate.postForObject(addr, httpEntity, byte[].class);
-						JsonObjectInput in = new JsonObjectInput(new ByteArrayInputStream(bytes));
-						ResponseEntity responseEntity = in.readObject(ResponseEntity.class);
-						return responseEntity.getResult();
+						RequestEntity response = restTemplate.postForObject(addr, httpEntity,RequestEntity.class);
+						return response.getResult();
 					}
 				});
 	}
 
 	public List<HttpMessageConverter<?>> getHttpMessageConverters() {
 		List<HttpMessageConverter<?>> messageConverters = new ArrayList<HttpMessageConverter<?>>(6);
+		messageConverters.add(new HessainHttpMessageConverter());
+		messageConverters.add(new DubboJSONObjectHttpMessageConverter());
 		messageConverters.add(new FastJsonHttpMessageConverter());
 		StringHttpMessageConverter stringHttpMessageConverter = new StringHttpMessageConverter();
 		stringHttpMessageConverter.setWriteAcceptCharset(false); // see SPR-7316
@@ -147,7 +140,6 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 		messageConverters.add(new AllEncompassingFormHttpMessageConverter());
 		return messageConverters;
 	}
-
 
 	protected String getContextPath(URL url) {
 		int pos = url.getPath().lastIndexOf("/");

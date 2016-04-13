@@ -2,11 +2,10 @@ package com.alibaba.dubbo.rpc.protocol.springmvc;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,11 +17,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.springframework.core.GenericTypeResolver;
-import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.ClassUtils;
@@ -32,6 +30,7 @@ import org.springframework.util.StreamUtils;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
@@ -42,10 +41,8 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import com.alibaba.com.caucho.hessian.io.Hessian2Input;
 import com.alibaba.dubbo.common.URL;
-import com.alibaba.dubbo.common.serialize.support.json.JsonObjectInput;
-import com.alibaba.dubbo.common.serialize.support.json.JsonObjectOutput;
-import com.alibaba.dubbo.common.utils.StringUtils;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.HttpHandler;
 import com.alibaba.dubbo.remoting.http.HttpServer;
@@ -54,9 +51,8 @@ import com.alibaba.dubbo.remoting.http.servlet.ServletManager;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
-import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.dubbo.rpc.protocol.springmvc.message.DubboJSONObjectHttpMessageConverter;
+import com.alibaba.dubbo.rpc.protocol.springmvc.message.HessainHttpMessageConverter;
 
 /**
  * 
@@ -101,7 +97,9 @@ public class SpringmvcHttpServer {
 			dispatcher.init(new SimpleServletConfig(servletContext));
 			// 注册ResponseBodyWrap,免除ResponseBody注解
 			registerResponseBodyWrap();
+			// 注册服务网页管理器
 			registerHandler(new WebManager(urls));
+			registerHandler(new SpringmvcHandlerInvoker(handlerMethods));
 		} catch (Exception e) {
 			throw new RpcException(e);
 		}
@@ -124,42 +122,6 @@ public class SpringmvcHttpServer {
 		public void handle(HttpServletRequest request, HttpServletResponse response)
 				throws IOException, ServletException {
 			RpcContext.getContext().setRemoteAddress(request.getRemoteAddr(), request.getRemotePort());
-
-			if (!StringUtils.isBlank(request.getContentType())) {
-				try {
-					String contentType = request.getContentType();
-					if ("application/springmvcJson".equalsIgnoreCase(contentType)) {
-						byte[] requestBody = StreamUtils.copyToByteArray(request.getInputStream());
-						JSONObject jsonObject = (JSONObject) JSON.parse(requestBody);
-						RequestEntity requestEntity = new RequestEntity(jsonObject, request.getContextPath());
-						response.setContentType(JSON_TYPE);
-						HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
-						Object[] args = handleJsonArgs(handlerMethod, requestEntity.getArgs());
-						Object result = invokerHandler(handlerMethod, args);
-						response.getWriter().println(result);
-						response.flushBuffer();
-					}
-
-					if ("application/springmvc_fastjson_bytes".equalsIgnoreCase(contentType)) {
-						JsonObjectInput in = new JsonObjectInput(request.getInputStream());
-						RequestEntity requestEntity = in.readObject(RequestEntity.class);
-						HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
-						ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
-						JsonObjectOutput out = new JsonObjectOutput(byteArrayOut, true);
-						ResponseEntity responseEntity = new ResponseEntity();
-						Object result = invokerHandler(handlerMethod, requestEntity.getArgs());
-						responseEntity.setResult(result);
-						out.writeObject(responseEntity);
-						response.setContentType("application/octet-stream;charset=utf-8");
-						response.getOutputStream().write(byteArrayOut.toByteArray());
-						response.flushBuffer();
-					}
-				} catch (Exception e) {
-					throw new RpcException(e);
-				}
-
-			}
-
 			dispatcher.service(request, response);
 		}
 	}
@@ -193,40 +155,6 @@ public class SpringmvcHttpServer {
 			} catch (Exception e) {
 			}
 		}
-	}
-
-	public Object[] handleJsonArgs(HandlerMethod handlerMethod, Object[] args) throws Exception {
-		MethodParameter[] parameters = handlerMethod.getMethodParameters();
-		if (args != null && args.length > 0) {
-			for (int i = 0; i < parameters.length; i++) {
-				if (args[i] == null) {
-					continue;
-				}
-				Class<?> parameterType = GenericTypeResolver.resolveParameterType(parameters[i],
-						handlerMethod.getBean().getClass());
-
-				if (List.class.isAssignableFrom(parameterType) || Set.class.isAssignableFrom(parameterType)) {
-					ParameterizedType genericParameterType = (ParameterizedType) parameters[i]
-							.getGenericParameterType();
-					Type type = genericParameterType.getActualTypeArguments()[0];
-					args[i] = JSON.parseArray(JSONObject.toJSONString(args[i]), new Type[] { type });
-				} else {
-					args[i] = JSON.parseObject(JSONObject.toJSONString(args[i]), parameterType);
-				}
-			}
-		}
-		return args;
-	}
-
-	public Object invokerHandler(HandlerMethod handlerMethod, Object[] args) throws Exception {
-		Method method = getHandlerMethodBridgeMethod(handlerMethod);
-		return method.invoke(handlerMethod.getBean(), args);
-	}
-
-	public Method getHandlerMethodBridgeMethod(HandlerMethod handlerMethod) {
-		Field bridgedMethodField = ReflectionUtils.findField(HandlerMethod.class, "bridgedMethod");
-		bridgedMethodField.setAccessible(true);
-		return (Method) ReflectionUtils.getField(bridgedMethodField, handlerMethod);
 	}
 
 	public Set<RequestMappingInfo> getRequestMappingInfos(Object handler) throws Exception {
@@ -398,6 +326,8 @@ public class SpringmvcHttpServer {
 	public void registerResponseBodyWrap() {
 		RequestMappingHandlerAdapter adapter = getRequestMappingHandlerAdapter(dispatcher);
 		List<HttpMessageConverter<?>> messageConverters = adapter.getMessageConverters();
+		messageConverters.add(new HessainHttpMessageConverter());
+		messageConverters.add(new DubboJSONObjectHttpMessageConverter());
 		ContentNegotiationManager contentNegotiationManager = getContentNegotiationManager();
 		List<Object> responseBodyAdvice = getResponseBodyAdvice();
 		RequestResponseBodyMethodProcessorWrap responseBody = new RequestResponseBodyMethodProcessorWrap(
