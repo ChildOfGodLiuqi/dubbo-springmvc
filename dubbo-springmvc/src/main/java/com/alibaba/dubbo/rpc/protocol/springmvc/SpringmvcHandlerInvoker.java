@@ -26,6 +26,8 @@ class SpringmvcHandlerInvoker {
 
 	private final String HESSIAN_TYPE = "application/hessain2";
 
+	private final String JSON_TYPE = "application/json;charset=utf-8";
+
 	@RequestMapping(value = { "/" }, consumes = { HESSIAN_TYPE }, produces = { HESSIAN_TYPE })
 	public ResponseEntity invoker(@RequestBody RequestEntity requestEntity) throws Exception {
 		HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
@@ -34,6 +36,15 @@ class SpringmvcHandlerInvoker {
 		}
 		Object result = invokerHandler(handlerMethod, requestEntity.getArgs());
 		return new ResponseEntity().setResult(result).setStatus(200).setMsg("success");
+	}
+
+	@RequestMapping(value = { "/" }, consumes = { JSON_TYPE }, produces = { JSON_TYPE })
+	public Object invokerJson(@RequestBody RequestEntity requestEntity) throws Exception {
+		HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
+		if (handlerMethod == null) {
+			return new ResponseEntity().setResult(null).setStatus(404).setMsg("not find service!");
+		}
+		return invokerHandler(handlerMethod, handleJsonArgs(handlerMethod, requestEntity.getArgs()));
 	}
 
 	public SpringmvcHandlerInvoker(Map<String, HandlerMethod> handlerMethods) {
