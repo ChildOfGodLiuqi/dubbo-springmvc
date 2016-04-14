@@ -54,13 +54,22 @@ mvn install -Dmaven.test.skip=true
 	2.可以打上@ErrorMsg注解,自定义要返回异常信息.
 		@ErrorMsg(msg = "错误信息",status=500,responseType="application/json;charset=utf-8")
 		
-#自定义token拦截器
+#拦截器
 	只需要把jar里的dubbo-springmvc.xml文件拿出来,配置基于springmvc的拦截器即可.
+	
+	缺点:
+		没办法获取到父容器,父容器的bean也就不能使用,必须以SpringUtil.getBean的形式获取相关bean
 
 #新增注解拦截器支持
 	注解类
 		@Interceptor(includePatterns={},excludePatterns={}) 
-	依赖dubbo @Service注解/或xml <dubbo:service interface="org.springframework.web.servlet.HandlerInterceptor" ref="bean实例">
+		缺点
+			依赖dubbo 
+				@Service注解
+				或xml <dubbo:service interface="org.springframework.web.servlet.HandlerInterceptor" ref="interceptor 实例">
+		优点
+			处于同一个容器下,可以注入相关bean.
+	
 	
 #依赖jar
 		<dependency>
