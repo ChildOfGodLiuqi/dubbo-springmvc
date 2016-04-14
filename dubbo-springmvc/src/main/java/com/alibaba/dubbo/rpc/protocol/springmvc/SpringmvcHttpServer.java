@@ -19,7 +19,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.ClassUtils;
@@ -284,7 +283,6 @@ public class SpringmvcHttpServer {
 		registerHandlerMethod(handler, method, requestMappingInfo);
 		HandlerMethod handlerMethod = getRequestMethodHandlerMap().get(requestMappingInfo);
 		handlerMethods.put(path, handlerMethod);
-		MethodParameter[] mps = handlerMethod.getMethodParameters();
 	}
 
 	public void registerHandlerMethod(Object handler, Method method, RequestMappingInfo requestMappingInfo)

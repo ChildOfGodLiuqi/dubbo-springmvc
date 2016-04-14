@@ -16,9 +16,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.method.HandlerMethod;
 
+import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
 class SpringmvcHandlerInvoker {
@@ -80,7 +82,16 @@ class SpringmvcHandlerInvoker {
 					ParameterizedType genericParameterType = (ParameterizedType) parameters[i]
 							.getGenericParameterType();
 					Type type = genericParameterType.getActualTypeArguments()[0];
-					args[i] = JSON.parseArray(JSONObject.toJSONString(args[i]), new Type[] { type });
+					try {
+						args[i] = JSON.parseArray(JSONObject.toJSONString(args[i]), new Type[] { type });
+					} catch (Exception e) {
+						try {
+							args[i] = JSONObject.parseArray(JSONObject.toJSONString(args[i]));
+						} catch (Exception e2) {
+							e2.printStackTrace();
+							throw new RpcException("convert args error", e2);
+						}
+					}
 				} else {
 					args[i] = JSON.parseObject(JSONObject.toJSONString(args[i]), parameterType);
 				}
