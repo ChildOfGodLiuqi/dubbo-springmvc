@@ -29,8 +29,11 @@ class SpringmvcHandlerInvoker {
 	@RequestMapping(value = { "/" }, consumes = { HESSIAN_TYPE }, produces = { HESSIAN_TYPE })
 	public ResponseEntity invoker(@RequestBody RequestEntity requestEntity) throws Exception {
 		HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
+		if (handlerMethod == null) {
+			return new ResponseEntity().setResult(null).setStatus(404).setMsg("not find service!");
+		}
 		Object result = invokerHandler(handlerMethod, requestEntity.getArgs());
-		return new ResponseEntity().setResult(result);
+		return new ResponseEntity().setResult(result).setStatus(200).setMsg("success");
 	}
 
 	public SpringmvcHandlerInvoker(Map<String, HandlerMethod> handlerMethods) {

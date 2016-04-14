@@ -28,7 +28,6 @@ import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.context.support.XmlWebApplicationContext;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
@@ -47,7 +46,6 @@ import com.alibaba.dubbo.remoting.http.servlet.BootstrapListener;
 import com.alibaba.dubbo.remoting.http.servlet.ServletManager;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
-import com.alibaba.dubbo.rpc.protocol.springmvc.message.DubboJSONObjectHttpMessageConverter;
 import com.alibaba.dubbo.rpc.protocol.springmvc.message.HessainHttpMessageConverter;
 
 /**
@@ -333,7 +331,6 @@ public class SpringmvcHttpServer {
 		RequestMappingHandlerAdapter adapter = getRequestMappingHandlerAdapter(dispatcher);
 		List<HttpMessageConverter<?>> messageConverters = adapter.getMessageConverters();
 		messageConverters.add(new HessainHttpMessageConverter());
-		messageConverters.add(new DubboJSONObjectHttpMessageConverter());
 		ContentNegotiationManager contentNegotiationManager = getContentNegotiationManager();
 		List<Object> responseBodyAdvice = getResponseBodyAdvice();
 		RequestResponseBodyMethodProcessorWrap responseBody = new RequestResponseBodyMethodProcessorWrap(

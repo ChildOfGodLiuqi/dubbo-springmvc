@@ -5,12 +5,8 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.xml.transform.Source;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -20,11 +16,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.http.converter.ByteArrayHttpMessageConverter;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
-import org.springframework.http.converter.xml.SourceHttpMessageConverter;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.DefaultResponseErrorHandler;
 import org.springframework.web.client.ResponseErrorHandler;
@@ -36,7 +27,7 @@ import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.AbstractProxyProtocol;
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
-import com.alibaba.dubbo.rpc.protocol.springmvc.message.DubboJSONObjectHttpMessageConverter;
+import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
 import com.alibaba.dubbo.rpc.protocol.springmvc.message.HessainHttpMessageConverter;
 import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
 
@@ -68,7 +59,7 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 		if (server == null) {
 			if (server == null) {
 				server = serverFactory.createServer(url.getParameter(Constants.SERVER_KEY, "jetty9"));
-				server.start(url,type);
+				server.start(url, type);
 				servers.put(addr, server);
 			}
 		}
@@ -90,9 +81,8 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 		CloseableHttpClient httpClient = HttpClientBuilder.create().setConnectionManager(manager).build();
 		HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
 		final RestTemplate restTemplate = new RestTemplate(factory);
-		List<HttpMessageConverter<?>> messageConverters = getHttpMessageConverters();
-		restTemplate.setMessageConverters(messageConverters);
-
+		restTemplate.getMessageConverters().add(0, new HessainHttpMessageConverter());
+		restTemplate.getMessageConverters().add(1, new FastJsonHttpMessageConverter());
 		final String addr = "http://" + url.getIp() + ":" + url.getPort() + "/" + getContextPath(url);
 		final String group = url.getParameter("group", "defaultGroup");
 		final String version = url.getParameter("version", "0.0.0");
@@ -121,24 +111,13 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 
 						};
 						restTemplate.setErrorHandler(errorHandler);
-						RequestEntity response = restTemplate.postForObject(addr, httpEntity,RequestEntity.class);
+						ResponseEntity response = restTemplate.postForObject(addr, httpEntity, ResponseEntity.class);
+						if (response.getStatus() != 200) {
+							throw new RpcException(response.getStatus(), response.getMsg());
+						}
 						return response.getResult();
 					}
 				});
-	}
-
-	public List<HttpMessageConverter<?>> getHttpMessageConverters() {
-		List<HttpMessageConverter<?>> messageConverters = new ArrayList<HttpMessageConverter<?>>(6);
-		messageConverters.add(new HessainHttpMessageConverter());
-		messageConverters.add(new DubboJSONObjectHttpMessageConverter());
-		messageConverters.add(new FastJsonHttpMessageConverter());
-		StringHttpMessageConverter stringHttpMessageConverter = new StringHttpMessageConverter();
-		stringHttpMessageConverter.setWriteAcceptCharset(false); // see SPR-7316
-		messageConverters.add(new ByteArrayHttpMessageConverter());
-		messageConverters.add(stringHttpMessageConverter);
-		messageConverters.add(new SourceHttpMessageConverter<Source>());
-		messageConverters.add(new AllEncompassingFormHttpMessageConverter());
-		return messageConverters;
 	}
 
 	protected String getContextPath(URL url) {
