@@ -4,18 +4,26 @@
 	1.	自动注册到本地springmvc容器.
 	2.	完成参数注入与rest输出(json/xml),开放支持个性化设置
 	3.	注册到注册中心与网关服务打通(nginx),建议使用基于nginx的 kong ,后台监控zookeeper,自动配置存活机器url,建立一定的规则进行转发.
-	4.	暂不支持消费 ,(客户端从网关加载api列表统一网关调用(需要dubbo客户端完成))
+	4.	客户端从网关加载api列表统一网关调用(需要dubbo客户端完成)
 	5.	授权/负载/监控
 
 	
 	默认发布地址
-		发布规则:http://ip:port:8080/组/service版本/接口名/方法名
+		发布规则:http://ip:port:8090/组/service版本/接口名/方法名
 		
+	支持url直接调用
 		默认每个方法暴露地址
 		地址:http://localhost:8090/defaultGroup/0.0.0/userService/getById?id=1
+	
+	支持json直接调用(POST提交)
+		调用地址L:http://host:port/
+			{"group":"组","version":"版本","service":"调用的服务","method":"调用的方法","args":[参数1,参数2]}
+	
+		example:
+			{"group":"defaultGroup","version":"0.0.0","service":"userService","method":"insert","args":[{"id":7841,"username":"张三"}]}
 
 	
-	同时也支持springmvc的注解,自定义url使用.
+	支持springmvc的注解,自定义url使用.
 	
 可使用http://ip:port/services查看发布的url服务.
 	
