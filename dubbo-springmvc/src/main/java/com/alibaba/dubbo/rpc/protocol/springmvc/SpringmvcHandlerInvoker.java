@@ -13,6 +13,7 @@ import org.springframework.core.MethodParameter;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.method.HandlerMethod;
 
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
@@ -29,6 +30,7 @@ class SpringmvcHandlerInvoker {
 	private final String JSON_TYPE = "application/json;charset=utf-8";
 
 	@RequestMapping(value = { "/" }, consumes = { HESSIAN_TYPE }, produces = { HESSIAN_TYPE })
+	@ResponseBody
 	public ResponseEntity invoker(@RequestBody RequestEntity requestEntity) throws Exception {
 		HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
 		if (handlerMethod == null) {
@@ -39,6 +41,7 @@ class SpringmvcHandlerInvoker {
 	}
 
 	@RequestMapping(value = { "/" }, consumes = { JSON_TYPE }, produces = { JSON_TYPE })
+	@ResponseBody
 	public Object invokerJson(@RequestBody RequestEntity requestEntity) throws Exception {
 		HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
 		if (handlerMethod == null) {

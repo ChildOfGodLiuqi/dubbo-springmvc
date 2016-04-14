@@ -19,6 +19,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.ClassUtils;
@@ -62,6 +63,7 @@ public class SpringmvcHttpServer {
 	private final Map<Object, HashSet<String>> urls = new ConcurrentHashMap<Object, HashSet<String>>();
 	private final Map<Object, HashSet<RequestMappingInfo>> mappingds = new ConcurrentHashMap<Object, HashSet<RequestMappingInfo>>();
 	private final Map<String, HandlerMethod> handlerMethods = new ConcurrentHashMap<String, HandlerMethod>();
+	private final Set<Class> clazzs = new HashSet<Class>();
 
 	private final String JSON_TYPE = "application/json;charset=utf-8";
 
@@ -74,7 +76,7 @@ public class SpringmvcHttpServer {
 		httpServer.close();
 	}
 
-	protected void doStart(URL url,Class clazz) {
+	protected void doStart(URL url, Class clazz) {
 		httpServer = httpBinder.bind(url, new SpringmvcHandler());
 
 		ServletContext servletContext = ServletManager.getInstance().getServletContext(url.getPort());
@@ -89,9 +91,11 @@ public class SpringmvcHttpServer {
 
 		try {
 			dispatcher.init(new SimpleServletConfig(servletContext));
-			//XmlWebApplicationContext webApplicationContext = (XmlWebApplicationContext) dispatcher.getWebApplicationContext();
-			//ApplicationContext parent = SpringUtil.getApplicationContext(clazz);
-			//webApplicationContext.setParent(parent);
+			// XmlWebApplicationContext webApplicationContext =
+			// (XmlWebApplicationContext) dispatcher.getWebApplicationContext();
+			// ApplicationContext parent =
+			// SpringUtil.getApplicationContext(clazz);
+			// webApplicationContext.setParent(parent);
 			// 注册ResponseBodyWrap,免除ResponseBody注解
 			registerResponseBodyWrap();
 			// 注册服务网页管理器
@@ -123,7 +127,7 @@ public class SpringmvcHttpServer {
 		}
 	}
 
-	public void start(URL url,Class type) {
+	public void start(URL url, Class type) {
 		doStart(url, type);
 	}
 
@@ -137,6 +141,7 @@ public class SpringmvcHttpServer {
 			for (Object bean : beans) {
 				registerHandler(bean);
 				detectHandlerMethods(resourceDef, bean, url);
+				clazzs.add(ClassUtils.getUserClass(bean));
 			}
 		} catch (Exception e) {
 			throw new RpcException(e);
@@ -153,10 +158,10 @@ public class SpringmvcHttpServer {
 			}
 		}
 	}
-	
-	public WebApplicationContext createWebApplicationContext(ApplicationContext parent) throws Exception{
-		Method createWebApplicationContext = ReflectionUtils.findMethod(DispatcherServlet.class, "createWebApplicationContext",
-				ApplicationContext.class);
+
+	public WebApplicationContext createWebApplicationContext(ApplicationContext parent) throws Exception {
+		Method createWebApplicationContext = ReflectionUtils.findMethod(DispatcherServlet.class,
+				"createWebApplicationContext", ApplicationContext.class);
 		createWebApplicationContext.setAccessible(true);
 		return (WebApplicationContext) createWebApplicationContext.invoke(dispatcher, parent);
 	}
@@ -279,6 +284,7 @@ public class SpringmvcHttpServer {
 		registerHandlerMethod(handler, method, requestMappingInfo);
 		HandlerMethod handlerMethod = getRequestMethodHandlerMap().get(requestMappingInfo);
 		handlerMethods.put(path, handlerMethod);
+		MethodParameter[] mps = handlerMethod.getMethodParameters();
 	}
 
 	public void registerHandlerMethod(Object handler, Method method, RequestMappingInfo requestMappingInfo)
@@ -335,6 +341,7 @@ public class SpringmvcHttpServer {
 		List<Object> responseBodyAdvice = getResponseBodyAdvice();
 		RequestResponseBodyMethodProcessorWrap responseBody = new RequestResponseBodyMethodProcessorWrap(
 				messageConverters, contentNegotiationManager, responseBodyAdvice);
+		responseBody.setClazzs(clazzs);
 		HandlerMethodReturnValueHandlerComposite handlerComposite = getHandlerMethodReturnValueHandlerComposite();
 		List<HandlerMethodReturnValueHandler> returnValueHandlerComposite = getHandlersByHandlerMethodReturnValueHandlerComposite(
 				handlerComposite);
@@ -469,6 +476,5 @@ public class SpringmvcHttpServer {
 	public String firstLow(String str) {
 		return str.substring(0, 1).toLowerCase() + str.substring(1);
 	}
-
 
 }
