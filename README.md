@@ -56,8 +56,12 @@ mvn install -Dmaven.test.skip=true
 		
 #自定义token拦截器
 	只需要把jar里的dubbo-springmvc.xml文件拿出来,配置基于springmvc的拦截器即可.
-#
 
+#新增注解拦截器支持
+	注解类
+		@Interceptor(includePatterns={},excludePatterns={}) 
+	依赖dubbo @Service注解/或xml <dubbo:service interface="org.springframework.web.servlet.HandlerInterceptor" ref="bean实例">
+	
 #依赖jar
 		<dependency>
 			<groupId>org.hibernate</groupId>

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,6 +34,8 @@ import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite;
 import org.springframework.web.servlet.DispatcherServlet;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.handler.MappedInterceptor;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
@@ -46,6 +49,7 @@ import com.alibaba.dubbo.remoting.http.servlet.BootstrapListener;
 import com.alibaba.dubbo.remoting.http.servlet.ServletManager;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
+import com.alibaba.dubbo.rpc.protocol.springmvc.annotation.Interceptor;
 import com.alibaba.dubbo.rpc.protocol.springmvc.message.HessainHttpMessageConverter;
 
 /**
@@ -138,9 +142,15 @@ public class SpringmvcHttpServer {
 			// 反射SpringExtensionFactory 拿到所有的ApplicatonContext 通过class类型获取bean
 			Set<Object> beans = SpringUtil.getBeans(resourceDef);
 			for (Object bean : beans) {
-				registerHandler(bean);
-				detectHandlerMethods(resourceDef, bean, url);
-				clazzs.add(ClassUtils.getUserClass(bean));
+				//注册拦截器
+				if (bean instanceof HandlerInterceptor) {
+					registerInterceptors((HandlerInterceptor) bean);
+				}else{
+					registerHandler(bean);
+					detectHandlerMethods(resourceDef, bean, url);
+					clazzs.add(ClassUtils.getUserClass(bean));
+				}
+
 			}
 		} catch (Exception e) {
 			throw new RpcException(e);
@@ -285,6 +295,23 @@ public class SpringmvcHttpServer {
 		handlerMethods.put(path, handlerMethod);
 	}
 
+	public void registerInterceptors(HandlerInterceptor interceptor) throws Exception {
+		Interceptor interceptorAnnotation = findInterceptorAnnotation(interceptor);
+		if (interceptorAnnotation != null) {
+			MappedInterceptor mappedInterceptor = new MappedInterceptor(interceptorAnnotation.includePatterns(),
+					interceptorAnnotation.excludePatterns(), interceptor);
+			getInterceptor().add(mappedInterceptor);
+		}
+
+	}
+
+	public List<HandlerInterceptor> getInterceptor() throws Exception {
+		RequestMappingHandlerMapping requestMappingHandlerMapping = getRequestMapping(dispatcher);
+		Field interceptors = ReflectionUtils.findField(RequestMappingHandlerMapping.class, "adaptedInterceptors");
+		interceptors.setAccessible(true);
+		return (List<HandlerInterceptor>) interceptors.get(requestMappingHandlerMapping);
+	}
+
 	public void registerHandlerMethod(Object handler, Method method, RequestMappingInfo requestMappingInfo)
 			throws Exception {
 		RequestMappingHandlerMapping requestMappingHandlerMapping = getRequestMapping(dispatcher);
@@ -292,6 +319,10 @@ public class SpringmvcHttpServer {
 				"registerHandlerMethod", Object.class, Method.class, Object.class);
 		registerHandlerMethod.setAccessible(true);
 		registerHandlerMethod.invoke(requestMappingHandlerMapping, handler, method, requestMappingInfo);
+	}
+
+	public Interceptor findInterceptorAnnotation(Object handlerInterceptor) {
+		return handlerInterceptor.getClass().getAnnotation(Interceptor.class);
 	}
 
 	public RequestMappingInfo createRequestMappingInfo(RequestMapping annotation) throws Exception {

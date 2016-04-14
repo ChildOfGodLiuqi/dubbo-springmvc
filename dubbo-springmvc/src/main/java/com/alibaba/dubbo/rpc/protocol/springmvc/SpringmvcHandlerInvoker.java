@@ -20,7 +20,6 @@ import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.RequestEntity;
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
 class SpringmvcHandlerInvoker {
@@ -33,7 +32,10 @@ class SpringmvcHandlerInvoker {
 
 	@RequestMapping(value = { "/" }, consumes = { HESSIAN_TYPE }, produces = { HESSIAN_TYPE })
 	@ResponseBody
-	public ResponseEntity invoker(@RequestBody RequestEntity requestEntity) throws Exception {
+	public ResponseEntity invokerHessain2(@RequestBody RequestEntity requestEntity) throws Exception {
+		if(requestEntity.mappingUrl()==null){
+			return new ResponseEntity().setResult(null).setStatus(500).setMsg("Missing parameter!!");
+		}
 		HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
 		if (handlerMethod == null) {
 			return new ResponseEntity().setResult(null).setStatus(404).setMsg("not find service!");
@@ -45,13 +47,16 @@ class SpringmvcHandlerInvoker {
 	@RequestMapping(value = { "/" }, consumes = { JSON_TYPE }, produces = { JSON_TYPE })
 	@ResponseBody
 	public Object invokerJson(@RequestBody RequestEntity requestEntity) throws Exception {
+		if(requestEntity.mappingUrl()==null){
+			return new ResponseEntity().setResult(null).setStatus(500).setMsg("Missing parameter!!");
+		}
 		HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
 		if (handlerMethod == null) {
 			return new ResponseEntity().setResult(null).setStatus(404).setMsg("not find service!");
 		}
 		return invokerHandler(handlerMethod, handleJsonArgs(handlerMethod, requestEntity.getArgs()));
 	}
-
+	
 	public SpringmvcHandlerInvoker(Map<String, HandlerMethod> handlerMethods) {
 		super();
 		this.handlerMethods = handlerMethods;

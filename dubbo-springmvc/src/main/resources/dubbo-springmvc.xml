@@ -11,6 +11,8 @@
 
 	<mvc:annotation-driven />
 
+	<!-- 异常处理器 -->
 	<bean
 		class="com.alibaba.dubbo.rpc.protocol.springmvc.SpringmvcExceptionHandler" />
+
 </beans>
