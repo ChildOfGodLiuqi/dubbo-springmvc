@@ -24,7 +24,7 @@ public class RequestEntity implements Serializable {
 	private String service;
 
 	private String contextPath;
-	
+
 	private Object result;
 
 	public RequestEntity(JSONObject jsonObject, String contextPath) {
@@ -62,15 +62,8 @@ public class RequestEntity implements Serializable {
 	}
 
 	public String mappingUrl() {
-		StringBuffer sb = new StringBuffer();
-		if (contextPath == null) {
-			this.contextPath = "";
-		}
-		if (!contextPath.equals("") || !contextPath.equals("/")) {
-			sb.append(this.contextPath);
-			sb.append("/");
-		}
-
+		StringBuffer sb = new StringBuffer("/");
+		
 		if (StringUtils.isBlank(group)) {
 			sb.append("defaultGroup");
 		} else {

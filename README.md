@@ -47,9 +47,8 @@ mvn install -Dmaven.test.skip=true
 	<!-- 如果要使用jetty9 server -->
 	<dubbo:protocol name="springmvc" server="jetty9" port="8080" />
 	
-	<!-- 如果要使用servlet ,不支持自定义contextpath contextpath必须为 "" -->
-	<!-- 同时web.xml com.alibaba.dubbo.remoting.http.servlet.DispatcherServlet 拦截路径 必须为 "/" -->
-	<!-- web.xml无需再配置org.springframework.web.servlet.DispatcherServlet,此类将有dubbo加载dubbo-springmvc.xml文件 -->
+	<!-- web.xml无需再配置org.springframework.web.servlet.DispatcherServlet-->
+	<!-- 此类将有dubbo com.alibaba.dubbo.remoting.http.servlet.DispatcherServlet加载dubbo-springmvc.xml文件并初始化springmvc -->
 	<!-- 可将dubbo-springmvc.xml 复制出来 个性化配置,使其支持jsp,文件上传,拦截器 -->
 	<!-- 优点:springmvc可以使用spring父容器 -->
 	<dubbo:protocol name="springmvc" server="servlet" contextPath="" port="8080" />

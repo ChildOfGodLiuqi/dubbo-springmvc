@@ -253,7 +253,7 @@ public class SpringmvcHttpServer {
 
 	protected void detectHandlerMethods(Object type, final Object handler, URL url) throws Exception {
 		Set<Method> methods = selectMethods(handler);
-		String path = "%s%s/%s/%s/%s";
+		String path = "%s/%s/%s/%s";
 		String serviceName = firstLow(((Class) type).getSimpleName());
 		String version = url.getParameter("version", "0.0.0");
 		String group = url.getParameter("group", "defaultGroup");
@@ -261,7 +261,7 @@ public class SpringmvcHttpServer {
 
 		HashSet<String> paths = new HashSet<String>();
 		for (Method method : methods) {
-			String p = String.format(path, contextPath, group, version, serviceName, method.getName());
+			String p = String.format(path, group, version, serviceName, method.getName());
 			p = p.substring(0, 1).equals("/") ? p : "/" + p;
 			registerHandlerMethod(handler, method, p, new String[] { JSON_TYPE });
 			paths.add(p);
@@ -302,13 +302,13 @@ public class SpringmvcHttpServer {
 	public void registerInterceptors(HandlerInterceptor interceptor) throws Exception {
 		Interceptor interceptorAnnotation = findInterceptorAnnotation(interceptor);
 		if (interceptorAnnotation != null) {
-			
+
 			MappedInterceptor mappedInterceptor = new MappedInterceptor(interceptorAnnotation.includePatterns(),
 					interceptorAnnotation.excludePatterns(), interceptor);
-			//兼容3.0旧版本
-			if(SpringVersion.getVersion().substring(0, 1).equals("3")){
+			// 兼容3.0旧版本
+			if (SpringVersion.getVersion().substring(0, 1).equals("3")) {
 				getMappedInterceptors().add(mappedInterceptor);
-			}else{
+			} else {
 				getAdaptedInterceptors().add(mappedInterceptor);
 			}
 		}
@@ -321,7 +321,7 @@ public class SpringmvcHttpServer {
 		interceptors.setAccessible(true);
 		return (List) interceptors.get(requestMappingHandlerMapping);
 	}
-	
+
 	public List getMappedInterceptors() throws Exception {
 		RequestMappingHandlerMapping requestMappingHandlerMapping = getRequestMapping(dispatcher);
 		Field interceptors = ReflectionUtils.findField(RequestMappingHandlerMapping.class, "mappedInterceptors");
