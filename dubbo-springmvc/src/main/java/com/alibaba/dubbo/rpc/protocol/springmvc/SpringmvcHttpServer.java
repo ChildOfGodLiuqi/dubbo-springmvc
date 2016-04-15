@@ -112,6 +112,7 @@ public class SpringmvcHttpServer {
 		}
 	}
 
+
 	protected boolean checkRootPath(String contextPath) {
 		return contextPath.replace("/", "").trim().length() > 0;
 	}
