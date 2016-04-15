@@ -19,6 +19,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.SpringVersion;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.ClassUtils;
@@ -49,7 +50,7 @@ import com.alibaba.dubbo.remoting.http.servlet.ServletManager;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.springmvc.annotation.Interceptor;
-import com.alibaba.dubbo.rpc.protocol.springmvc.body.RequestResponseBodyMethodProcessorWrap;
+import com.alibaba.dubbo.rpc.protocol.springmvc.body.RequestResponseBodyMethodProcessorImpl;
 import com.alibaba.dubbo.rpc.protocol.springmvc.message.HessainHttpMessageConverter;
 import com.alibaba.dubbo.rpc.protocol.springmvc.util.SpringUtil;
 import com.alibaba.dubbo.rpc.protocol.springmvc.web.SpringmvcHandlerInvoker;
@@ -112,7 +113,6 @@ public class SpringmvcHttpServer {
 		}
 	}
 
-
 	protected boolean checkRootPath(String contextPath) {
 		return contextPath.replace("/", "").trim().length() > 0;
 	}
@@ -146,10 +146,10 @@ public class SpringmvcHttpServer {
 			// 反射SpringExtensionFactory 拿到所有的ApplicatonContext 通过class类型获取bean
 			Set<Object> beans = SpringUtil.getBeans(resourceDef);
 			for (Object bean : beans) {
-				//注册拦截器
+				// 注册拦截器
 				if (bean instanceof HandlerInterceptor) {
 					registerInterceptors((HandlerInterceptor) bean);
-				}else{
+				} else {
 					registerHandler(bean);
 					detectHandlerMethods(resourceDef, bean, url);
 					clazzs.add(ClassUtils.getUserClass(bean));
@@ -302,18 +302,31 @@ public class SpringmvcHttpServer {
 	public void registerInterceptors(HandlerInterceptor interceptor) throws Exception {
 		Interceptor interceptorAnnotation = findInterceptorAnnotation(interceptor);
 		if (interceptorAnnotation != null) {
+			
 			MappedInterceptor mappedInterceptor = new MappedInterceptor(interceptorAnnotation.includePatterns(),
 					interceptorAnnotation.excludePatterns(), interceptor);
-			getInterceptor().add(mappedInterceptor);
+			//兼容3.0旧版本
+			if(SpringVersion.getVersion().substring(0, 1).equals("3")){
+				getMappedInterceptors().add(mappedInterceptor);
+			}else{
+				getAdaptedInterceptors().add(mappedInterceptor);
+			}
 		}
 
 	}
 
-	public List<HandlerInterceptor> getInterceptor() throws Exception {
+	public List getAdaptedInterceptors() throws Exception {
 		RequestMappingHandlerMapping requestMappingHandlerMapping = getRequestMapping(dispatcher);
 		Field interceptors = ReflectionUtils.findField(RequestMappingHandlerMapping.class, "adaptedInterceptors");
 		interceptors.setAccessible(true);
-		return (List<HandlerInterceptor>) interceptors.get(requestMappingHandlerMapping);
+		return (List) interceptors.get(requestMappingHandlerMapping);
+	}
+	
+	public List getMappedInterceptors() throws Exception {
+		RequestMappingHandlerMapping requestMappingHandlerMapping = getRequestMapping(dispatcher);
+		Field interceptors = ReflectionUtils.findField(RequestMappingHandlerMapping.class, "mappedInterceptors");
+		interceptors.setAccessible(true);
+		return (List) interceptors.get(requestMappingHandlerMapping);
 	}
 
 	public void registerHandlerMethod(Object handler, Method method, RequestMappingInfo requestMappingInfo)
@@ -372,7 +385,7 @@ public class SpringmvcHttpServer {
 		messageConverters.add(new HessainHttpMessageConverter());
 		ContentNegotiationManager contentNegotiationManager = getContentNegotiationManager();
 		List<Object> responseBodyAdvice = getResponseBodyAdvice();
-		RequestResponseBodyMethodProcessorWrap responseBody = new RequestResponseBodyMethodProcessorWrap(
+		RequestResponseBodyMethodProcessorImpl responseBody = new RequestResponseBodyMethodProcessorImpl(
 				messageConverters, contentNegotiationManager, responseBodyAdvice);
 		responseBody.setClazzs(clazzs);
 		HandlerMethodReturnValueHandlerComposite handlerComposite = getHandlerMethodReturnValueHandlerComposite();
@@ -431,9 +444,8 @@ public class SpringmvcHttpServer {
 				return RequestMapping.class;
 			}
 
-			@Override
 			public String name() {
-				return requestMapping != null ? requestMapping.name() : new String();
+				return null;
 			}
 
 			@Override
