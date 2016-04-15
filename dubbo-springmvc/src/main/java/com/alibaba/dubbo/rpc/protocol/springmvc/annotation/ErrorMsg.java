@@ -1,4 +1,4 @@
-package com.alibaba.dubbo.rpc.protocol.springmvc;
+package com.alibaba.dubbo.rpc.protocol.springmvc.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

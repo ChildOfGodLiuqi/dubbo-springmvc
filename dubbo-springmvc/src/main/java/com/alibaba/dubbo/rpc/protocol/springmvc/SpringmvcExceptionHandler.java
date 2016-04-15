@@ -9,6 +9,8 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.alibaba.dubbo.rpc.protocol.springmvc.annotation.ErrorMsg;
+
 /**
  * 
  * @author wuyu DATA:2016-3-1
