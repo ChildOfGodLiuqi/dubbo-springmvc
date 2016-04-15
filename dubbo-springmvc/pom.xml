@@ -112,7 +112,18 @@
 
 	</dependencies>
 
-
+	<distributionManagement>
+		<snapshotRepository>
+			<id>Snapshots</id>
+			<name>Snapshots</name>
+			<url>http://zrpc5.wuyu.pub:8081/nexus/content/repositories/snapshots/</url>
+		</snapshotRepository>
+		<repository>
+			<id>Releases</id>
+			<name>Releases</name>
+			<url>http://zrpc5.wuyu.pub:8081/nexus/content/repositories/releases/</url>
+		</repository>
+	</distributionManagement>
 
 
 	<build>

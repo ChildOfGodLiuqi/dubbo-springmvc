@@ -78,8 +78,18 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 	// 暂时不支持基于springmvc的消费
 	protected <T> T doRefer(Class<T> type, URL url) throws RpcException {
 		PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
-		CloseableHttpClient httpClient = HttpClientBuilder.create().setConnectionManager(manager).build();
+		
+		CloseableHttpClient httpClient = HttpClientBuilder
+				.create()
+				.setConnectionManager(manager)
+				.setMaxConnPerRoute(url.getParameter(Constants.CONNECTIONS_KEY, 20))
+				.setMaxConnTotal(url.getParameter(Constants.CONNECTIONS_KEY, 20))
+				.build();
 		HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
+		
+		factory.setConnectTimeout(url.getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT));
+		factory.setReadTimeout(url.getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT));
+		
 		final RestTemplate restTemplate = new RestTemplate(factory);
 		restTemplate.getMessageConverters().add(0, new HessainHttpMessageConverter());
 		restTemplate.getMessageConverters().add(1, new FastJsonHttpMessageConverter());
