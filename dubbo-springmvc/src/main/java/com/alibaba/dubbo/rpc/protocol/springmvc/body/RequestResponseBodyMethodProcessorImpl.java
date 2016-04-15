@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Set;
@@ -71,9 +72,11 @@ public class RequestResponseBodyMethodProcessorImpl extends RequestResponseBodyM
 
 	public Class getContainingClass(MethodParameter returnType) {
 		try {
-			return (Class) ReflectionUtils.findMethod(MethodParameter.class, "getContainingClass").invoke(returnType);
+			Method getContainingClassMethod = ReflectionUtils.findMethod(MethodParameter.class, "getContainingClass");
+			if (getContainingClassMethod != null) {
+				return (Class) getContainingClassMethod.invoke(returnType);
+			}
 		} catch (Exception e) {
-			e.printStackTrace();
 		}
 		return returnType.getDeclaringClass();
 	}
