@@ -1,4 +1,4 @@
-package com.alibaba.dubbo.rpc.protocol.springmvc;
+package com.alibaba.dubbo.rpc.protocol.springmvc.web;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -22,7 +22,7 @@ import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 
-class SpringmvcHandlerInvoker {
+public class SpringmvcHandlerInvoker {
 
 	private Map<String, HandlerMethod> handlerMethods;
 

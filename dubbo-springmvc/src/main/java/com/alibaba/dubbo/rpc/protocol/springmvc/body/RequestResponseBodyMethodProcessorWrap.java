@@ -1,5 +1,5 @@
 
-package com.alibaba.dubbo.rpc.protocol.springmvc;
+package com.alibaba.dubbo.rpc.protocol.springmvc.body;
 
 import java.io.IOException;
 import java.io.InputStream;

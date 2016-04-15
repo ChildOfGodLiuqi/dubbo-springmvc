@@ -1,4 +1,4 @@
-package com.alibaba.dubbo.rpc.protocol.springmvc;
+package com.alibaba.dubbo.rpc.protocol.springmvc.web;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
