@@ -13,6 +13,6 @@
 
 	<!-- 异常处理器 -->
 	<bean
-		class="com.alibaba.dubbo.rpc.protocol.springmvc.SpringmvcExceptionHandler" />
+		class="com.alibaba.dubbo.rpc.protocol.springmvc.exception.SpringmvcExceptionHandler" />
 
 </beans>
