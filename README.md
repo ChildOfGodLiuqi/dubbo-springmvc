@@ -47,6 +47,13 @@ mvn install -Dmaven.test.skip=true
 	<!-- 如果要使用jetty9 server -->
 	<dubbo:protocol name="springmvc" server="jetty9" port="8080" />
 	
+	<!-- 如果要使用servlet ,不支持自定义contextpath contextpath必须为 "" -->
+	<!-- 同时web.xml com.alibaba.dubbo.remoting.http.servlet.DispatcherServlet 拦截路径 必须为 "/" -->
+	<!-- web.xml无需再配置org.springframework.web.servlet.DispatcherServlet,此类将有dubbo加载dubbo-springmvc.xml文件 -->
+	<!-- 可将dubbo-springmvc.xml 复制出来 个性化配置,使其支持jsp,文件上传,拦截器 -->
+	<!-- 优点:springmvc可以使用spring父容器 -->
+	<dubbo:protocol name="springmvc" server="servlet" contextPath="" port="8080" />
+	
 
 #增加异常处理SpringmvcExceptionHandler
 
@@ -54,13 +61,13 @@ mvn install -Dmaven.test.skip=true
 	2.可以打上@ErrorMsg注解,自定义要返回异常信息.
 		@ErrorMsg(msg = "错误信息",status=500,responseType="application/json;charset=utf-8")
 		
-#拦截器
+#拦截器(使用servlet容器忽略,可按照原生springmvc方式配置)
 	只需要把jar里的dubbo-springmvc.xml文件拿出来,配置基于springmvc的拦截器即可.
 	
 	缺点:
 		没办法获取到父容器,父容器的bean也就不能使用,必须以SpringUtil.getBean的形式获取相关bean
 
-#新增注解拦截器支持
+#新增注解拦截器支持(使用servlet容器忽略,可按照原生springmvc方式配置)
 	注解类
 		@Interceptor(includePatterns={},excludePatterns={}) 
 		缺点
@@ -69,6 +76,8 @@ mvn install -Dmaven.test.skip=true
 				或xml <dubbo:service interface="org.springframework.web.servlet.HandlerInterceptor" ref="interceptor 实例">
 		优点
 			处于同一个容器下,可以注入相关bean.
+	
+	
 	
 	
 #依赖jar

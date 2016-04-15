@@ -17,13 +17,14 @@
 	<bean
 		class="com.alibaba.dubbo.rpc.protocol.springmvc.exception.SpringmvcExceptionHandler" />
 
-	<!-- 扫描包 -->
+	<!-- dubbo容器 为servlet时,可使用此选项扫描 -->
 <!-- 	<context:component-scan base-package="com.xxxx"
 		use-default-filters="false">
 		<context:include-filter type="annotation"
 			expression="org.springframework.stereotype.Controller" />
 	</context:component-scan> -->
 
+	<!-- dubbo容器 为servlet时,可开启jsp支持. -->
 	<!-- <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver"> 
 		<property name="prefix" value="/WEB-INF/jsp/"></property> <property name="suffix" 
 		value=".jsp"></property> </bean> -->
@@ -32,7 +33,15 @@
 	<!-- <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver"> 
 		<property name="defaultEncoding" value="utf-8" /> <property name="maxUploadSize" 
 		value="102400000" /> <property name="maxInMemorySize" value="40960" /> </bean> -->
-
+		
+	<!-- 拦截器   -->
+<!-- 	<mvc:interceptors>
+		<mvc:interceptor>
+			<mvc:mapping path="/**"/>
+			<bean class="class extends HandlerInterceptor"/>
+		</mvc:interceptor>
+	</mvc:interceptors> -->
+	
 	<!-- 映射静态资源 避免springmvc拦截 造成资源浪费 -->
 	<!-- <mvc:resources location="/static/" mapping="/static/**" /> -->
 
