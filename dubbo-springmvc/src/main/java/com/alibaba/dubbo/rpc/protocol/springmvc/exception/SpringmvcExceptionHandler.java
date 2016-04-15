@@ -1,4 +1,4 @@
-package com.alibaba.dubbo.rpc.protocol.springmvc;
+package com.alibaba.dubbo.rpc.protocol.springmvc.exception;
 
 import java.io.IOException;
 
