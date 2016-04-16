@@ -445,7 +445,7 @@ public class SpringmvcHttpServer {
 			}
 
 			public String name() {
-				return null;
+				return new String();
 			}
 
 			@Override
