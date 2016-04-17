@@ -8,9 +8,16 @@ import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.http.HeaderElement;
+import org.apache.http.HeaderElementIterator;
+import org.apache.http.HttpResponse;
+import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.message.BasicHeaderElementIterator;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.protocol.HttpContext;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -78,19 +85,27 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 	// 暂时不支持基于springmvc的消费
 	protected <T> T doRefer(Class<T> type, URL url) throws RpcException {
 		PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
-		
-		CloseableHttpClient httpClient = HttpClientBuilder
-				.create()
-				.setConnectionManager(manager)
+
+		CloseableHttpClient httpClient = HttpClientBuilder.create().setConnectionManager(manager)
 				.setMaxConnPerRoute(url.getParameter(Constants.CONNECTIONS_KEY, 20))
 				.setMaxConnTotal(url.getParameter(Constants.CONNECTIONS_KEY, 20))
 				.build();
 		HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
-		
+
 		factory.setConnectTimeout(url.getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT));
 		factory.setReadTimeout(url.getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT));
-		
+
 		final RestTemplate restTemplate = new RestTemplate(factory);
+		ResponseErrorHandler errorHandler = new DefaultResponseErrorHandler() {
+
+			@Override
+			public void handleError(ClientHttpResponse response) throws IOException {
+				String copyToString = StreamUtils.copyToString(response.getBody(), Charset.forName("utf-8"));
+				throw new RpcException(response.getStatusCode().value(), copyToString);
+			}
+
+		};
+		restTemplate.setErrorHandler(errorHandler);
 		restTemplate.getMessageConverters().add(0, new HessainHttpMessageConverter());
 		restTemplate.getMessageConverters().add(1, new FastJsonHttpMessageConverter());
 		final String addr = "http://" + url.getIp() + ":" + url.getPort() + "/" + getContextPath(url);
@@ -110,17 +125,6 @@ public class SpringmvcProtocol extends AbstractProxyProtocol {
 						HttpHeaders headers = new HttpHeaders();
 						headers.setContentType(new MediaType("application", "hessain2"));
 						HttpEntity httpEntity = new HttpEntity(requestEntity, headers);
-						ResponseErrorHandler errorHandler = new DefaultResponseErrorHandler() {
-
-							@Override
-							public void handleError(ClientHttpResponse response) throws IOException {
-								String copyToString = StreamUtils.copyToString(response.getBody(),
-										Charset.forName("utf-8"));
-								throw new RpcException(response.getStatusCode().value(), copyToString);
-							}
-
-						};
-						restTemplate.setErrorHandler(errorHandler);
 						ResponseEntity response = restTemplate.postForObject(addr, httpEntity, ResponseEntity.class);
 						if (response.getStatus() != 200) {
 							throw new RpcException(response.getStatus(), response.getMsg());
