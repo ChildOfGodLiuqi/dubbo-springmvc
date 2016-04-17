@@ -25,7 +25,14 @@
 	
 	支持springmvc的注解,自定义url使用.
 	
-可使用http://ip:port/services查看发布的url服务.
+可使用http://ip:port
+		/services			查看发布的url服务并可以做模拟调用.
+		/servicesJ			以json方式返回所有服务以及映射地址
+		/beans				查看bean容器
+		/dataSource			查看数据源信息
+		/env				查看环境变量信息
+		/mem				查看jvm信息
+		/thread				查看线程信息
 	
 		
 #安装
