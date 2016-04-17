@@ -31,7 +31,9 @@ public class HessainHttpMessageConverter extends AbstractHttpMessageConverter<Ob
 	protected Object readInternal(Class<? extends Object> clazz, HttpInputMessage inputMessage)
 			throws IOException, HttpMessageNotReadableException {
 		Hessian2Input  in = new Hessian2Input(inputMessage.getBody());
-		return in.readObject(clazz);
+		Object readObject = in.readObject(clazz);
+		in.close();
+		return readObject;
 	}
 
 	@Override
