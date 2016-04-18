@@ -42,6 +42,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import com.alibaba.dubbo.common.URL;
+import com.alibaba.dubbo.common.logger.Logger;
+import com.alibaba.dubbo.common.logger.LoggerFactory;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.HttpHandler;
 import com.alibaba.dubbo.remoting.http.HttpServer;
@@ -257,15 +259,20 @@ public class SpringmvcHttpServer {
 		String serviceName = firstLow(((Class) type).getSimpleName());
 		String version = url.getParameter("version", "0.0.0");
 		String group = url.getParameter("group", "defaultGroup");
-		String contextPath = getContextPath(url).equals("") ? "" : getContextPath(url) + "/";
 
 		HashSet<String> paths = new HashSet<String>();
 		for (Method method : methods) {
 			String p = String.format(path, group, version, serviceName, method.getName());
 			p = p.substring(0, 1).equals("/") ? p : "/" + p;
+
+			// 由于springmvc不支持方法重载 ,故过滤相同方法
+			if(paths.contains(p)){
+				continue;
+			}
 			registerHandlerMethod(handler, method, p, new String[] { JSON_TYPE });
 			paths.add(p);
 		}
+
 		Set<String> custemerPaths = getUrlPathsByHandler(handler);
 		paths.addAll(custemerPaths);
 		urls.put(handler, paths);
