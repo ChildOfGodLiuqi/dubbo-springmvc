@@ -25,7 +25,8 @@
 	
 	支持springmvc的注解,自定义url使用.
 	
-#查看信息
+#查看信息 可在dubbo-springmvc.xml中开启/关闭
+
 		/services			查看发布的url服务并可以做模拟调用.
 		/servicesJ			以json方式返回所有服务以及映射地址
 		/beans				查看bean容器
@@ -33,8 +34,10 @@
 		/env				查看环境变量信息
 		/mem				查看jvm信息
 		/thread				查看线程信息
-	
-		
+
+#支持webjars 以jar包方式引入相关js/css/html等静态资源
+	具体 参考 http://webjars.org
+
 #安装
 mvn install -Dmaven.test.skip=true
 
