@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,7 +19,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.SpringVersion;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.ClassUtils;
@@ -30,7 +29,8 @@ import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.context.support.WebApplicationContextUtils;
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import org.springframework.web.context.support.XmlWebApplicationContext;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
@@ -44,8 +44,6 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import com.alibaba.dubbo.common.URL;
-import com.alibaba.dubbo.common.logger.Logger;
-import com.alibaba.dubbo.common.logger.LoggerFactory;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.HttpHandler;
 import com.alibaba.dubbo.remoting.http.HttpServer;
@@ -58,6 +56,7 @@ import com.alibaba.dubbo.rpc.protocol.springmvc.body.RequestResponseBodyMethodPr
 import com.alibaba.dubbo.rpc.protocol.springmvc.message.HessainHttpMessageConverter;
 import com.alibaba.dubbo.rpc.protocol.springmvc.util.SpringUtil;
 import com.alibaba.dubbo.rpc.protocol.springmvc.web.SpringmvcHandlerInvoker;
+import com.alibaba.dubbo.rpc.protocol.springmvc.web.WebJarsController;
 import com.alibaba.dubbo.rpc.protocol.springmvc.web.WebManager;
 
 /**
@@ -102,15 +101,25 @@ public class SpringmvcHttpServer {
 
 		try {
 			dispatcher.init(new SimpleServletConfig(servletContext));
-			// XmlWebApplicationContext webApplicationContext =
-			// (XmlWebApplicationContext) dispatcher.getWebApplicationContext();
-			// ApplicationContext parent =
-			// SpringUtil.getApplicationContext(clazz);
-			// webApplicationContext.setParent(parent);
+			XmlWebApplicationContext webApplicationContext = (XmlWebApplicationContext) dispatcher
+					.getWebApplicationContext();
+//			ApplicationContext parent = SpringUtil.getApplicationContext(clazz);
+//			webApplicationContext.setParent(parent);
+//			webApplicationContext.refresh();
 			// 注册ResponseBodyWrap,免除ResponseBody注解
 			registerResponseBodyWrap();
+			// 用于注册@Configuration 注解
+			AnnotationConfigWebApplicationContext annoApp = webApplicationContext
+					.getBean(AnnotationConfigWebApplicationContext.class);
+			annoApp.setParent(webApplicationContext);
+			Map<String, Object> beansWithAnnotation = webApplicationContext.getBeansWithAnnotation(Configuration.class);
+			for (String configuration : beansWithAnnotation.keySet()) {
+				Object bean = beansWithAnnotation.get(configuration);
+				annoApp.register(bean.getClass());
+				annoApp.refresh();
+			}
+
 			// 注册服务网页管理器,可自定义相关网页管理器
-			WebApplicationContext webApplicationContext = dispatcher.getWebApplicationContext();
 			String[] webManagers = webApplicationContext.getBeanNamesForType(WebManager.class);
 			for (String webManagerName : webManagers) {
 				WebManager webManager = (WebManager) webApplicationContext.getBean(webManagerName);
@@ -131,7 +140,10 @@ public class SpringmvcHttpServer {
 					registerHandler(springmvcHandlerInvoker);
 				}
 			}
-
+			
+			//支持web
+			registerHandler(new WebJarsController());
+			
 		} catch (Exception e) {
 			throw new RpcException(e);
 		}
@@ -171,7 +183,7 @@ public class SpringmvcHttpServer {
 			Set<Object> beans = SpringUtil.getBeans(resourceDef);
 			for (Object bean : beans) {
 				// 注册拦截器
-				if (bean instanceof HandlerInterceptor) {
+				if (bean instanceof HandlerInterceptor || bean instanceof MappedInterceptor) {
 					registerInterceptors((HandlerInterceptor) bean);
 				} else {
 					registerHandler(bean);
@@ -343,10 +355,6 @@ public class SpringmvcHttpServer {
 			}
 		}
 
-	}
-
-	public static void main(String[] args) {
-		System.out.println(ArrayList.class.isAssignableFrom(List.class));
 	}
 
 	public List getAdaptedInterceptors() throws Exception {
