@@ -42,6 +42,8 @@ public class WebManager {
 	private static String template = "<tr class=\"%s\"><td>%s</td><td>%s</td></td><td><a href=\"%s\">%s</td><td><button onclick='invokerPop(\"%s\")' class=\"btn btn-default btn-primary btn-sm\">调用</button></td></tr>";
 	private static List<String> cssTrClass = Arrays.asList("", "info");
 
+	private boolean enableWebManager = true;
+
 	private Map<Object, HashSet<String>> handlerMappings = new ConcurrentHashMap<Object, HashSet<String>>();
 
 	@RequestMapping("/services")
@@ -85,6 +87,11 @@ public class WebManager {
 
 		}
 		return handlerJson;
+	}
+
+	public WebManager() {
+		super();
+		// TODO Auto-generated constructor stub
 	}
 
 	@RequestMapping("/beans")
@@ -298,6 +305,16 @@ public class WebManager {
 	public void setUrls(Map<Object, HashSet<String>> urls) {
 		this.handlerMappings = urls;
 	}
+
+
+	public boolean isEnableWebManager() {
+		return enableWebManager;
+	}
+
+	public void setEnableWebManager(boolean enableWebManager) {
+		this.enableWebManager = enableWebManager;
+	}
+
 
 	private static String invokerPop = "<div class='modal' id='mymodal'><div class='modal-dialog'><div class='modal-content'><div class='modal-header'><button type='button' class='close' data-dismiss='modal'><span aria-hidden='true'>×</span><span class='sr-only'>Close</span></button><h4 class='modal-title'>调用方法,url注意跨域!</h4></div><div class='modal-body'><form role='form'><div class='form-group'><label for='invokerUrl'>地址：</label> <input type='url'class='form-control' id='invokerUrl' value='' placeholder='调用地址'></div><div class='form-group'><label for='invokerMethod'>参数:</label> <input type='text'class='form-control' value='' id='invokerArgs'placeholder='参数以json格式传递:{\"name\":\"wuyu\"},如果没有参数:{}'></div><div class='form-group'><label for='invokerMethod'>次数:</label> <input type='number'class='form-control' value='1' id='invokerCount'placeholder='調用次数'></div><div class='form-group'><label for='invokerMethod'> 请求头:</label></br> <label class='radio-inline'> <input type='radio' name='reqeustHeader' checked='checked' id='inlineRadio1' value='application/x-www-form-urlencoded; charset=UTF-8'> application/x-www-form-urlencoded</label> <label class='radio-inline'> <input type='radio' name='reqeustHeader' id='inlineRadio2' value='application/json;charset=UTF-8'>application/json</div><div class='form-group'><label for='invokerMethod'>result:</label><div id='result'></div></div><div class='modal-footer'><button type='button' class='btn btn-default' data-dismiss='modal'>关闭</button><button type='button' id='execute' onclick='invoker()' class='btn btn-primary'>执行</button></div></form></div></div></div></div>";
 

@@ -30,10 +30,12 @@ public class SpringmvcHandlerInvoker {
 
 	private final String JSON_TYPE = "application/json;charset=utf-8";
 
+	private boolean enableSpringmvcHandlerInvoker;
+
 	@RequestMapping(value = { "/" }, consumes = { HESSIAN_TYPE }, produces = { HESSIAN_TYPE })
 	@ResponseBody
 	public ResponseEntity invokerHessain2(@RequestBody RequestEntity requestEntity) throws Exception {
-		if(requestEntity.mappingUrl()==null){
+		if (requestEntity.mappingUrl() == null) {
 			return new ResponseEntity().setResult(null).setStatus(500).setMsg("Missing parameter!!");
 		}
 		HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
@@ -47,7 +49,7 @@ public class SpringmvcHandlerInvoker {
 	@RequestMapping(value = { "/" }, consumes = { JSON_TYPE }, produces = { JSON_TYPE })
 	@ResponseBody
 	public Object invokerJson(@RequestBody RequestEntity requestEntity) throws Exception {
-		if(requestEntity.mappingUrl()==null){
+		if (requestEntity.mappingUrl() == null) {
 			return new ResponseEntity().setResult(null).setStatus(500).setMsg("Missing parameter!!");
 		}
 		HandlerMethod handlerMethod = handlerMethods.get(requestEntity.mappingUrl());
@@ -56,7 +58,7 @@ public class SpringmvcHandlerInvoker {
 		}
 		return invokerHandler(handlerMethod, handleJsonArgs(handlerMethod, requestEntity.getArgs()));
 	}
-	
+
 	public SpringmvcHandlerInvoker(Map<String, HandlerMethod> handlerMethods) {
 		super();
 		this.handlerMethods = handlerMethods;
@@ -104,4 +106,22 @@ public class SpringmvcHandlerInvoker {
 		}
 		return args;
 	}
+
+	public boolean isEnableSpringmvcHandlerInvoker() {
+		return enableSpringmvcHandlerInvoker;
+	}
+
+	public void setEnableSpringmvcHandlerInvoker(boolean enableSpringmvcHandlerInvoker) {
+		this.enableSpringmvcHandlerInvoker = enableSpringmvcHandlerInvoker;
+	}
+
+	public void setHandlerMethods(Map<String, HandlerMethod> handlerMethods) {
+		this.handlerMethods = handlerMethods;
+	}
+
+	public SpringmvcHandlerInvoker() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
 }

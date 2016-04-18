@@ -30,6 +30,7 @@ import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
@@ -109,8 +110,19 @@ public class SpringmvcHttpServer {
 			// 注册ResponseBodyWrap,免除ResponseBody注解
 			registerResponseBodyWrap();
 			// 注册服务网页管理器
-			registerHandler(new WebManager(urls));
-			registerHandler(new SpringmvcHandlerInvoker(handlerMethods));
+			WebManager webManager = dispatcher.getWebApplicationContext().getBean(WebManager.class);
+			if (webManager.isEnableWebManager()) {
+				webManager.setUrls(urls);
+				registerHandler(webManager);
+			}
+
+			//注册执行器
+			SpringmvcHandlerInvoker springmvcHandlerInvoker = dispatcher.getWebApplicationContext()
+					.getBean(SpringmvcHandlerInvoker.class);
+			if (springmvcHandlerInvoker.isEnableSpringmvcHandlerInvoker()) {
+				springmvcHandlerInvoker.setHandlerMethods(handlerMethods);
+				registerHandler(springmvcHandlerInvoker);
+			}
 		} catch (Exception e) {
 			throw new RpcException(e);
 		}
@@ -315,9 +327,9 @@ public class SpringmvcHttpServer {
 					interceptorAnnotation.excludePatterns(), interceptor);
 			// 兼容3.0旧版本
 			Class<?>[] interfaces = MappedInterceptor.class.getInterfaces();
-			if(interfaces.length==0){
+			if (interfaces.length == 0) {
 				getMappedInterceptors().add(mappedInterceptor);
-			}else{
+			} else {
 				getAdaptedInterceptors().add(mappedInterceptor);
 			}
 		}
