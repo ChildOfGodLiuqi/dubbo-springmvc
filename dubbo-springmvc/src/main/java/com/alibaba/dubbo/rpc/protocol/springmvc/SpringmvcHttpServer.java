@@ -19,7 +19,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.ClassUtils;
@@ -29,7 +28,6 @@ import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.context.support.XmlWebApplicationContext;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.HandlerMethodSelector;
@@ -108,16 +106,6 @@ public class SpringmvcHttpServer {
 //			webApplicationContext.refresh();
 			// 注册ResponseBodyWrap,免除ResponseBody注解
 			registerResponseBodyWrap();
-			// 用于注册@Configuration 注解
-			AnnotationConfigWebApplicationContext annoApp = webApplicationContext
-					.getBean(AnnotationConfigWebApplicationContext.class);
-			annoApp.setParent(webApplicationContext);
-			Map<String, Object> beansWithAnnotation = webApplicationContext.getBeansWithAnnotation(Configuration.class);
-			for (String configuration : beansWithAnnotation.keySet()) {
-				Object bean = beansWithAnnotation.get(configuration);
-				annoApp.register(bean.getClass());
-				annoApp.refresh();
-			}
 
 			// 注册服务网页管理器,可自定义相关网页管理器
 			String[] webManagers = webApplicationContext.getBeanNamesForType(WebManager.class);
@@ -141,7 +129,7 @@ public class SpringmvcHttpServer {
 				}
 			}
 			
-			//支持web
+			//支持webjar
 			registerHandler(new WebJarsController());
 			
 		} catch (Exception e) {
