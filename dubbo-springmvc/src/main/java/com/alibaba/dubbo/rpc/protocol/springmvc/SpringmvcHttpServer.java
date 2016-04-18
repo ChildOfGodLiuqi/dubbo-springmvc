@@ -109,20 +109,29 @@ public class SpringmvcHttpServer {
 			// webApplicationContext.setParent(parent);
 			// 注册ResponseBodyWrap,免除ResponseBody注解
 			registerResponseBodyWrap();
-			// 注册服务网页管理器
-			WebManager webManager = dispatcher.getWebApplicationContext().getBean(WebManager.class);
-			if (webManager.isEnableWebManager()) {
-				webManager.setUrls(urls);
-				registerHandler(webManager);
+			// 注册服务网页管理器,可自定义相关网页管理器
+			WebApplicationContext webApplicationContext = dispatcher.getWebApplicationContext();
+			String[] webManagers = webApplicationContext.getBeanNamesForType(WebManager.class);
+			for (String webManagerName : webManagers) {
+				WebManager webManager = (WebManager) webApplicationContext.getBean(webManagerName);
+				if (webManager.isEnableWebManager()) {
+					webManager.setUrls(urls);
+					registerHandler(webManager);
+				}
 			}
 
-			//注册执行器
-			SpringmvcHandlerInvoker springmvcHandlerInvoker = dispatcher.getWebApplicationContext()
-					.getBean(SpringmvcHandlerInvoker.class);
-			if (springmvcHandlerInvoker.isEnableSpringmvcHandlerInvoker()) {
-				springmvcHandlerInvoker.setHandlerMethods(handlerMethods);
-				registerHandler(springmvcHandlerInvoker);
+			// 注册执行器,可自定义相关执行器
+			String[] springmvcHandlerInvokers = webApplicationContext
+					.getBeanNamesForType(SpringmvcHandlerInvoker.class);
+			for (String springmvcHandlerInvokerName : springmvcHandlerInvokers) {
+				SpringmvcHandlerInvoker springmvcHandlerInvoker = (SpringmvcHandlerInvoker) webApplicationContext
+						.getBean(springmvcHandlerInvokerName);
+				if (springmvcHandlerInvoker.isEnableSpringmvcHandlerInvoker()) {
+					springmvcHandlerInvoker.setHandlerMethods(handlerMethods);
+					registerHandler(springmvcHandlerInvoker);
+				}
 			}
+
 		} catch (Exception e) {
 			throw new RpcException(e);
 		}
