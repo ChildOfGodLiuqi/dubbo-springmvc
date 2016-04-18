@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -266,7 +267,7 @@ public class SpringmvcHttpServer {
 			p = p.substring(0, 1).equals("/") ? p : "/" + p;
 
 			// 由于springmvc不支持方法重载 ,故过滤相同方法
-			if(paths.contains(p)){
+			if (paths.contains(p)) {
 				continue;
 			}
 			registerHandlerMethod(handler, method, p, new String[] { JSON_TYPE });
@@ -313,13 +314,18 @@ public class SpringmvcHttpServer {
 			MappedInterceptor mappedInterceptor = new MappedInterceptor(interceptorAnnotation.includePatterns(),
 					interceptorAnnotation.excludePatterns(), interceptor);
 			// 兼容3.0旧版本
-			if (SpringVersion.getVersion().substring(0, 1).equals("3")) {
+			Class<?>[] interfaces = MappedInterceptor.class.getInterfaces();
+			if(interfaces.length==0){
 				getMappedInterceptors().add(mappedInterceptor);
-			} else {
+			}else{
 				getAdaptedInterceptors().add(mappedInterceptor);
 			}
 		}
 
+	}
+
+	public static void main(String[] args) {
+		System.out.println(ArrayList.class.isAssignableFrom(List.class));
 	}
 
 	public List getAdaptedInterceptors() throws Exception {
