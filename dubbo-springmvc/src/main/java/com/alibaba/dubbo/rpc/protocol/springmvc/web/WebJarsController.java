@@ -25,13 +25,13 @@ import org.springframework.web.servlet.HandlerMapping;
  */
 public class WebJarsController {
 
-	String mvcPrefix = "/META-INF/resources";
+	String mvcPrefix = "/META-INF/resources/";
 
-	@RequestMapping("/webjars/{webjar}/**")
+	@RequestMapping("/static/{webjar}/**")
 	public void loadWebJar(@PathVariable("webjar") String webjar, HttpServletResponse response,
 			HttpServletRequest request) {
 		String mvcPath = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
-		ClassPathResource classPathResource = new ClassPathResource(mvcPrefix+mvcPath);
+		ClassPathResource classPathResource = new ClassPathResource(mvcPrefix+mvcPath.substring(8));
 		write(request, response, classPathResource);
 	}
 
