@@ -4,7 +4,14 @@ import java.util.Date;
 
 import javax.management.RuntimeErrorException;
 
-import com.alibaba.dubbo.rpc.protocol.springmvc.ErrorMsg;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import com.alibaba.dubbo.rpc.protocol.springmvc.annotation.ErrorMsg;
 import com.vcg.example.model.User;
 import com.vcg.example.service.UserService;
 
@@ -13,8 +20,38 @@ import com.vcg.example.service.UserService;
  * @author wuyu
  *
  */
-public class UserServiceImpl implements UserService {
 
+//springmvc注解
+@RequestMapping("/user")
+public class UserServiceImpl implements UserService {
+	
+	/**
+	 * 以下是基于springmvc注解,实现rest
+	 */
+	
+	//可以不指定produce  默认会自动序列化成json
+	@RequestMapping(value="/{id}",produces=MediaType.APPLICATION_JSON_VALUE)
+	public User findById(@PathVariable("id") Integer id){
+		return new User()
+				.setId(id)
+				.setPassword("123456")
+				.setRegisterDate(new Date())
+				.setUsername("test")
+				.build();
+	}
+	
+	//只接受  请求头为application/json
+	@RequestMapping(value="register",consumes=MediaType.APPLICATION_JSON_VALUE)
+	//只做简单返回
+	public User register(@RequestBody User user){
+		return user;
+	}
+	
+	/**
+	 * 
+	 * 
+	 * 以下是自动生成url
+	 */
 	@Override
 	// http://localhost:8090/defaultGroup/0.0.0/userService/getById?id=1
 	public User getById(Integer id) {
@@ -45,7 +82,6 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	//http://localhost:8090/defaultGroup/0.0.0/userService/testErrorMsgException
-	@ErrorMsg(msg = "测试自定义测试信息", responseType = "text/xml;charset=utf-8")
 	public void testErrorMsgException(Integer id) {
 		if (id == null || id.equals("testException")) {
 			throw new RuntimeException();
