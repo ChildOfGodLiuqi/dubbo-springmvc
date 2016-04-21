@@ -1,17 +1,19 @@
 package com.vcg.example.service.impl;
 
+import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 
-import javax.management.RuntimeErrorException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import org.springframework.http.HttpMethod;
+import org.apache.commons.io.IOUtils;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.multipart.MultipartFile;
 
-import com.alibaba.dubbo.rpc.protocol.springmvc.annotation.ErrorMsg;
 import com.vcg.example.model.User;
 import com.vcg.example.service.UserService;
 
@@ -21,32 +23,39 @@ import com.vcg.example.service.UserService;
  *
  */
 
-//springmvc注解
+// springmvc注解
 @RequestMapping("/user")
 public class UserServiceImpl implements UserService {
-	
+
 	/**
 	 * 以下是基于springmvc注解,实现rest
 	 */
-	
-	//可以不指定produce  默认会自动序列化成json
-	@RequestMapping(value="/{id}",produces=MediaType.APPLICATION_JSON_VALUE)
-	public User findById(@PathVariable("id") Integer id){
-		return new User()
-				.setId(id)
-				.setPassword("123456")
-				.setRegisterDate(new Date())
-				.setUsername("test")
-				.build();
+
+	// 可以不指定produce 默认会自动序列化成json
+	@RequestMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+	public User findById(@PathVariable("id") Integer id) {
+		return new User().setId(id).setPassword("123456").setRegisterDate(new Date()).setUsername("test").build();
 	}
-	
-	//只接受  请求头为application/json
-	@RequestMapping(value="register",consumes=MediaType.APPLICATION_JSON_VALUE)
-	//只做简单返回
-	public User register(@RequestBody User user){
+
+	// 只接受 请求头为application/json
+	@RequestMapping(value = "register", consumes = MediaType.APPLICATION_JSON_VALUE)
+	// 只做简单返回
+	public User register(@RequestBody User user) {
 		return user;
 	}
-	
+
+	@RequestMapping(value = "delete")
+	public String delete(HttpServletRequest request, HttpServletResponse response) {
+		String id = request.getParameter("id");
+		return id;
+	}
+
+	@RequestMapping(value = "upload")
+	public List<String> upload(MultipartFile file) throws IOException {
+		List<String> readLines = IOUtils.readLines(file.getInputStream());
+		return readLines;
+	}
+
 	/**
 	 * 
 	 * 
@@ -73,7 +82,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	//http://localhost:8090/defaultGroup/0.0.0/userService/testException
+	// http://localhost:8090/defaultGroup/0.0.0/userService/testException
 	public void testException(Integer id) {
 		if (id == null || id.equals("testException")) {
 			throw new RuntimeException("未找到相关用户");
@@ -81,7 +90,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	//http://localhost:8090/defaultGroup/0.0.0/userService/testErrorMsgException
+	// http://localhost:8090/defaultGroup/0.0.0/userService/testErrorMsgException
 	public void testErrorMsgException(Integer id) {
 		if (id == null || id.equals("testException")) {
 			throw new RuntimeException();

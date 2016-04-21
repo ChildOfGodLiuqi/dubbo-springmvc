@@ -13,7 +13,7 @@
 		
 	支持url直接调用
 		默认每个方法暴露地址
-		地址:http://localhost:8090/defaultGroup/0.0.0/userService/getById?id=1
+		地址:http://localhost:8090/defaultGroup/0.0.0/userService/getById
 	
 	支持json直接调用(POST提交)
 		调用地址L:http://host:port/
@@ -22,13 +22,47 @@
 		example:
 			{"group":"defaultGroup","version":"0.0.0","service":"userService","method":"insert","args":[{"id":7841,"username":"张三"}]}
 
+
+	支持所有springmvc 注解.
+		
+		//可以不指定produce  默认会自动序列化成json
+		@RequestMapping(value="/{id}",produces=MediaType.APPLICATION_JSON_VALUE)
+		public User findById(@PathVariable("id") Integer id){
+			return new User()
+					.setId(id)
+					.setPassword("123456")
+					.setRegisterDate(new Date())
+					.setUsername("test")
+					.build();
+		}
+		
+		//只接受请求头为application/json
+		@RequestMapping(value="/register",consumes=MediaType.APPLICATION_JSON_VALUE)
+		//只做简单返回
+		public User register(@RequestBody User user){
+				return user;
+		}
+		
+		//注入request,response
+		@RequestMapping(value="delete")
+		public String delete(HttpServletRequest request,HttpServletResponse response){
+			String id = request.getParameter("id");
+			return id;
+		}
+		
+		//上传文件,需要在dubbo-springmvc.xml配置 CommonsMultipartResolver
+		@RequestMapping(value = "upload")
+		public List<String> upload(MultipartFile file) throws IOException {
+			List<String> readLines = IOUtils.readLines(file.getInputStream());
+			return readLines;
+		}
 	
-	支持springmvc的注解,自定义url使用.
+
 	
 #查看信息 可在dubbo-springmvc.xml中开启/关闭
 
-		/services			查看发布的url服务并可以做模拟调用.
-		/servicesJ			以json方式返回所有服务以及映射地址
+		/services			查看发布的url服务并可以做模拟调用,只能查看 自动发布的接口url
+		/api				以json方式返回所有服务以及映射地址,返回所有包括自定义url
 		/beans				查看bean容器
 		/dataSource			查看数据源信息
 		/env				查看环境变量信息
@@ -67,14 +101,16 @@ mvn install -Dmaven.test.skip=true
 	2.可以打上@ErrorMsg注解,自定义要返回异常信息.
 		@ErrorMsg(msg = "错误信息",status=500,responseType="application/json;charset=utf-8")
 		
-#拦截器(使用servlet容器忽略,可按照原生springmvc方式配置)
+#springmvc拦截器
+	(使用servlet容器忽略,可按照原生springmvc方式配置)
 
 	只需要把jar里的dubbo-springmvc.xml文件拿出来,配置基于springmvc的拦截器即可.
 	
 	缺点:
 		没办法获取到父容器,父容器的bean也就不能使用,必须以SpringUtil.getBean的形式获取相关bean
 
-#新增注解拦截器支持(使用servlet容器忽略,可按照原生springmvc方式配置)
+#新增注解拦截器支持
+	(使用servlet容器忽略,可按照原生springmvc方式配置)
 	注解类
 		@Interceptor(includePatterns={},excludePatterns={}) 
 		缺点
