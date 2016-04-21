@@ -84,12 +84,11 @@ public class UserServiceImpl implements UserService {
 	}
 	
 	// http://localhost:8090/defaultGroup/0.0.0/userService/testRequest
-	public void testRequest(HttpServletRequest request,HttpServletResponse response){
-		System.out.println(request);
-		System.out.println(response);
+	public String testRequest(HttpServletRequest request,HttpServletResponse response){
+		return request.toString();
 	}
 	
-	
+	// http://localhost:8090/defaultGroup/0.0.0/userService/testUpload
 	public List<String> testUpload(MultipartFile file) throws IOException{
 		List<String> readLines = IOUtils.readLines(file.getInputStream());
 		return readLines;

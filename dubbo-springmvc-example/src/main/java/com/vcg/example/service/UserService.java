@@ -41,7 +41,7 @@ public interface UserService {
 	public User getById(Integer id);
 	
 	
-	public void testRequest(HttpServletRequest request,HttpServletResponse response);
+	public String testRequest(HttpServletRequest request,HttpServletResponse response);
 	
 	//请求头为json,自动注入
 	public List<User> testRequestBody(@RequestBody List<User> users);
