@@ -6,6 +6,8 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.IOUtils;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.vcg.example.model.User;
@@ -37,6 +39,14 @@ public interface UserService {
 	
 	// http://localhost:8090/defaultGroup/0.0.0/userService/getById?id=1
 	public User getById(Integer id);
+	
+	
+	public void testRequest(HttpServletRequest request,HttpServletResponse response);
+	
+	//请求头为json,自动注入
+	public List<User> testRequestBody(@RequestBody List<User> users);
+	
+	public List<String> testUpload(MultipartFile file) throws IOException;
 
 	
 	// http://localhost:8090/defaultGroup/0.0.0/userService/deleteById?id=1

@@ -64,13 +64,37 @@ public class UserServiceImpl implements UserService {
 	/**
 	 * 
 	 * 
-	 * 以下是自动生成url
+	 * 以下是自动生成url,同时支持 springmvc,可以使用springmvc 自动注入功能,注解
 	 */
 	@Override
 	// http://localhost:8090/defaultGroup/0.0.0/userService/getById?id=1
 	public User getById(Integer id) {
 		return new User(id, "test1", "123456", new Date());
 	}
+	
+	
+	
+	/**
+	 * 测试自动发布url 支持springmvc注解,注入
+	 */
+	//请求头json数组
+	// http://localhost:8090/defaultGroup/0.0.0/userService/testRequestBody
+	public List<User> testRequestBody(@RequestBody List<User> users){
+		return users;
+	}
+	
+	// http://localhost:8090/defaultGroup/0.0.0/userService/testRequest
+	public void testRequest(HttpServletRequest request,HttpServletResponse response){
+		System.out.println(request);
+		System.out.println(response);
+	}
+	
+	
+	public List<String> testUpload(MultipartFile file) throws IOException{
+		List<String> readLines = IOUtils.readLines(file.getInputStream());
+		return readLines;
+	}
+	
 
 	@Override
 	// http://localhost:8090/defaultGroup/0.0.0/userService/deleteById?id=1
