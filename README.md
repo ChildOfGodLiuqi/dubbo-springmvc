@@ -175,3 +175,10 @@ mvn install -Dmaven.test.skip=true
 			<artifactId>jackson-databind</artifactId>
 			<version>2.3.3</version>
 		</dependency>
+		
+		
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+			<version>1.2.7</version>
+		</dependency>

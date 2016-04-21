@@ -34,7 +34,12 @@ public class UserServiceImpl implements UserService {
 	// 可以不指定produce 默认会自动序列化成json
 	@RequestMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public User findById(@PathVariable("id") Integer id) {
-		return new User().setId(id).setPassword("123456").setRegisterDate(new Date()).setUsername("test").build();
+		return new User()
+				.setId(id)
+				.setPassword("123456")
+				.setRegisterDate(new Date())
+				.setUsername("test")
+				.build();
 	}
 
 	// 只接受 请求头为application/json
