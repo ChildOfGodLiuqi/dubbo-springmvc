@@ -13,6 +13,7 @@ import org.springframework.core.MethodParameter;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.method.HandlerMethod;
 
@@ -32,6 +33,10 @@ public class SpringmvcHandlerInvoker {
 
 	private boolean enableSpringmvcHandlerInvoker;
 
+	
+	
+
+	
 	@RequestMapping(value = { "/" }, consumes = { HESSIAN_TYPE }, produces = { HESSIAN_TYPE })
 	@ResponseBody
 	public ResponseEntity invokerHessain2(@RequestBody RequestEntity requestEntity) throws Exception {

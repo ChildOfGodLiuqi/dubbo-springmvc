@@ -11,6 +11,8 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor;
 
+import com.alibaba.dubbo.rpc.protocol.springmvc.util.MethodParameterUtil;
+
 /**
  * 为了省略 @ResponseBody注解
  * 
@@ -40,19 +42,9 @@ public class RequestResponseBodyMethodProcessorImpl extends RequestResponseBodyM
 	@Override
 	public boolean supportsReturnType(MethodParameter returnType) {
 		return super.supportsReturnType(returnType) || clazzs.contains(returnType.getDeclaringClass())
-				|| clazzs.contains(getContainingClass(returnType));
+				|| clazzs.contains(MethodParameterUtil.getContainingClass(returnType));
 	}
 
-	public Class getContainingClass(MethodParameter returnType) {
-		try {
-			Method getContainingClassMethod = ReflectionUtils.findMethod(MethodParameter.class, "getContainingClass");
-			if (getContainingClassMethod != null) {
-				return (Class) getContainingClassMethod.invoke(returnType);
-			}
-		} catch (Exception e) {
-		}
-		return returnType.getDeclaringClass();
-	}
 
 	public Set<Class> getClazzs() {
 		return clazzs;

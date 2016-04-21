@@ -101,9 +101,10 @@ public class SpringmvcHttpServer {
 			dispatcher.init(new SimpleServletConfig(servletContext));
 			XmlWebApplicationContext webApplicationContext = (XmlWebApplicationContext) dispatcher
 					.getWebApplicationContext();
-//			ApplicationContext parent = SpringUtil.getApplicationContext(clazz);
-//			webApplicationContext.setParent(parent);
-//			webApplicationContext.refresh();
+			// ApplicationContext parent =
+			// SpringUtil.getApplicationContext(clazz);
+			// webApplicationContext.setParent(parent);
+			// webApplicationContext.refresh();
 			// 注册ResponseBodyWrap,免除ResponseBody注解
 			registerResponseBodyWrap();
 
@@ -113,6 +114,7 @@ public class SpringmvcHttpServer {
 				WebManager webManager = (WebManager) webApplicationContext.getBean(webManagerName);
 				if (webManager.isEnableWebManager()) {
 					webManager.setUrls(urls);
+					webManager.setHandlerMethods(handlerMethods);
 					registerHandler(webManager);
 				}
 			}
@@ -128,10 +130,10 @@ public class SpringmvcHttpServer {
 					registerHandler(springmvcHandlerInvoker);
 				}
 			}
-			
-			//支持webjar
+
+			// 支持webjar
 			registerHandler(new WebJarsController());
-			
+
 		} catch (Exception e) {
 			throw new RpcException(e);
 		}
@@ -313,9 +315,21 @@ public class SpringmvcHttpServer {
 	}
 
 	public void registerHandlerMethod(Object handler, Method method, String path, String[] produce) throws Exception {
+		RequestMapping handlerRequestAno = handler.getClass().getAnnotation(RequestMapping.class);
+		RequestMapping methodRequestAno = method.getAnnotation(RequestMapping.class);
+
+		HashSet<RequestMappingInfo> list = mappingds.get(handler);
+
+		RequestMappingInfo customerMappingInfo = null;
+		if (methodRequestAno != null) {
+			customerMappingInfo = createRequestMappingInfo(methodRequestAno);
+			if (handlerRequestAno != null) {
+				customerMappingInfo = createRequestMappingInfo(handlerRequestAno).combine(customerMappingInfo);
+			}
+		}
+
 		RequestMapping requestMappingAno = createRequestMappingAno(null, path, produce);
 		RequestMappingInfo requestMappingInfo = createRequestMappingInfo(requestMappingAno);
-		HashSet<RequestMappingInfo> list = mappingds.get(handler);
 		if (list != null) {
 			list.add(requestMappingInfo);
 		} else {
@@ -326,6 +340,11 @@ public class SpringmvcHttpServer {
 		registerHandlerMethod(handler, method, requestMappingInfo);
 		HandlerMethod handlerMethod = getRequestMethodHandlerMap().get(requestMappingInfo);
 		handlerMethods.put(path, handlerMethod);
+		if(customerMappingInfo!=null){
+			for (String pattern : customerMappingInfo.getPatternsCondition().getPatterns()) {
+				handlerMethods.put(pattern, handlerMethod);
+			}
+		}
 	}
 
 	public void registerInterceptors(HandlerInterceptor interceptor) throws Exception {

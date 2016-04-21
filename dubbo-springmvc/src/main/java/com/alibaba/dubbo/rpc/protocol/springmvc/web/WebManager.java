@@ -23,13 +23,19 @@ import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.MethodParameter;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.util.ReflectionUtils.MethodFilter;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.HandlerMethodSelector;
 
 import com.alibaba.dubbo.common.utils.NetUtils;
+import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
+import com.alibaba.dubbo.rpc.protocol.springmvc.util.MethodParameterUtil;
 import com.alibaba.dubbo.rpc.protocol.springmvc.util.SpringUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -45,6 +51,7 @@ public class WebManager {
 	private boolean enableWebManager = true;
 
 	private Map<Object, HashSet<String>> handlerMappings = new ConcurrentHashMap<Object, HashSet<String>>();
+	private Map<String, HandlerMethod> handlerMethods = new ConcurrentHashMap<String, HandlerMethod>();
 
 	@RequestMapping("/services")
 	public void services(HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -57,37 +64,33 @@ public class WebManager {
 		response.flushBuffer();
 	}
 
-	@RequestMapping("/servicesJ")
+	@RequestMapping(value = { "/api" }, method = { RequestMethod.GET })
 	@ResponseBody
-	public JSONObject servicesJ(HttpServletRequest request) {
+	public Object welcome() {
+		JSONArray jsonArray = new JSONArray();
 
-		int serverPort = request.getServerPort();
-		String hostAddress = NetUtils.getLocalAddress().getHostAddress();
-		String addr = request.getScheme() + "://" + hostAddress + ":" + serverPort;
-
-		JSONObject handlerJson = new JSONObject();
-
-		for (Object handler : handlerMappings.keySet()) {
-			Class<?> userClass = ClassUtils.getUserClass(handler);
-			String handlerName = userClass.getName();
+		for (String path : handlerMethods.keySet()) {
+			HandlerMethod handlerMethod = handlerMethods.get(path);
+			Class<?> userClass = ClassUtils.getUserClass(handlerMethod.getBean());
 			JSONObject jsonObject = new JSONObject();
-			handlerJson.put(handlerName, jsonObject);
-			ArrayList<String> paths = new ArrayList<String>(handlerMappings.get(handler));
-			Collections.sort(paths);
-			Method[] methods = userClass.getMethods();
-			for (Method method : methods) {
-				for (String path : paths) {
-					String[] split = path.split("/");
-					String methodName = split[split.length - 1];
-					if (method.getName().equals(methodName)) {
-						jsonObject.put(method.toString(), addr + path);
-					}
-				}
+			jsonObject.put("service", userClass.getName());
+			jsonObject.put("method", handlerMethod.getMethod().getName());
+			jsonObject.put("url", path);
+			MethodParameter[] methodParameters = handlerMethod.getMethodParameters();
+			JSONArray args=new JSONArray();
+			for (MethodParameter methodParameter : methodParameters) {
+				args.add(methodParameter.getParameterType());
 			}
+			
+			jsonObject.put("args", args);
+			
+			jsonObject.put("returnType", handlerMethod.getMethod().getReturnType());
+			jsonArray.add(jsonObject);
 
 		}
-		return handlerJson;
+		return new ResponseEntity().setMsg("welcome to dubbo-springmvc rest api!").setStatus(200).setResult(jsonArray);
 	}
+	
 
 	public WebManager() {
 		super();
@@ -306,7 +309,6 @@ public class WebManager {
 		this.handlerMappings = urls;
 	}
 
-
 	public boolean isEnableWebManager() {
 		return enableWebManager;
 	}
@@ -314,7 +316,6 @@ public class WebManager {
 	public void setEnableWebManager(boolean enableWebManager) {
 		this.enableWebManager = enableWebManager;
 	}
-
 
 	private static String invokerPop = "<div class='modal' id='mymodal'><div class='modal-dialog'><div class='modal-content'><div class='modal-header'><button type='button' class='close' data-dismiss='modal'><span aria-hidden='true'>×</span><span class='sr-only'>Close</span></button><h4 class='modal-title'>调用方法,url注意跨域!</h4></div><div class='modal-body'><form role='form'><div class='form-group'><label for='invokerUrl'>地址：</label> <input type='url'class='form-control' id='invokerUrl' value='' placeholder='调用地址'></div><div class='form-group'><label for='invokerMethod'>参数:</label> <input type='text'class='form-control' value='' id='invokerArgs'placeholder='参数以json格式传递:{\"name\":\"wuyu\"},如果没有参数:{}'></div><div class='form-group'><label for='invokerMethod'>次数:</label> <input type='number'class='form-control' value='1' id='invokerCount'placeholder='調用次数'></div><div class='form-group'><label for='invokerMethod'> 请求头:</label></br> <label class='radio-inline'> <input type='radio' name='reqeustHeader' checked='checked' id='inlineRadio1' value='application/x-www-form-urlencoded; charset=UTF-8'> application/x-www-form-urlencoded</label> <label class='radio-inline'> <input type='radio' name='reqeustHeader' id='inlineRadio2' value='application/json;charset=UTF-8'>application/json</div><div class='form-group'><label for='invokerMethod'>result:</label><div id='result'></div></div><div class='modal-footer'><button type='button' class='btn btn-default' data-dismiss='modal'>关闭</button><button type='button' id='execute' onclick='invoker()' class='btn btn-primary'>执行</button></div></form></div></div></div></div>";
 
@@ -340,4 +341,15 @@ public class WebManager {
 			+ ",error : function(data) {\r\n" + "result = data;\r\n" + "}\r\n" + "});\r\n" + "return result;\r\n"
 			+ "}\r\n" + "</script>";
 
+	public WebManager(Map<Object, HashSet<String>> urls, Map<String, HandlerMethod> handlerMethods) {
+		this.handlerMappings = urls;
+		this.handlerMethods = handlerMethods;
+	}
+
+	public void setHandlerMethods(Map<String, HandlerMethod> handlerMethods) {
+		this.handlerMethods = handlerMethods;
+	}
+
+	
+	
 }
