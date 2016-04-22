@@ -25,7 +25,6 @@ import javax.sql.DataSource;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.MethodParameter;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.ReflectionUtils;
 import org.springframework.util.ReflectionUtils.MethodFilter;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -34,8 +33,8 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.HandlerMethodSelector;
 
 import com.alibaba.dubbo.common.utils.NetUtils;
+import com.alibaba.dubbo.common.utils.StringUtils;
 import com.alibaba.dubbo.rpc.protocol.springmvc.entity.ResponseEntity;
-import com.alibaba.dubbo.rpc.protocol.springmvc.util.MethodParameterUtil;
 import com.alibaba.dubbo.rpc.protocol.springmvc.util.SpringUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -55,9 +54,13 @@ public class WebManager {
 
 	@RequestMapping("/services")
 	public void services(HttpServletRequest request, HttpServletResponse response) throws Exception {
-		int serverPort = request.getServerPort();
-		String hostAddress = NetUtils.getLocalAddress().getHostAddress();
-		String addr = request.getScheme() + "://" + hostAddress + ":" + serverPort;
+		String serverName = request.getServerName();
+		int port = request.getServerPort();
+		String contextPath = request.getContextPath();
+		String addr = request.getScheme() + "://" + serverName + ":" + port;
+		if (!StringUtils.isBlank(contextPath)) {
+			addr += contextPath;
+		}
 		String genHtml = WebManager.genHtml(handlerMappings, addr);
 		response.setContentType("text/html;charset=utf-8");
 		response.getWriter().write(genHtml);
@@ -66,31 +69,64 @@ public class WebManager {
 
 	@RequestMapping(value = { "/api" }, method = { RequestMethod.GET })
 	@ResponseBody
-	public Object welcome() {
-		JSONArray jsonArray = new JSONArray();
+	public Object api(HttpServletRequest request) {
+		JSONObject json = new JSONObject();
+		String serverName = request.getServerName();
+		int port = request.getServerPort();
+		String contextPath = request.getContextPath();
+		String addr = request.getScheme() + "://" + serverName + ":" + port;
+		if (!StringUtils.isBlank(contextPath)) {
+			addr += contextPath;
+		}
 
 		for (String path : handlerMethods.keySet()) {
 			HandlerMethod handlerMethod = handlerMethods.get(path);
 			Class<?> userClass = ClassUtils.getUserClass(handlerMethod.getBean());
 			JSONObject jsonObject = new JSONObject();
+			Class<?>[] serviceInterfaces = userClass.getInterfaces();
+			JSONArray array = null;
+
+			if (serviceInterfaces.length == 1) {
+				String interfaceName = serviceInterfaces[0].getName();
+				if (json.getJSONArray(interfaceName) != null) {
+					array = json.getJSONArray(interfaceName);
+				} else {
+					array = new JSONArray();
+				}
+				json.put(interfaceName, array);
+			} else {
+				if (json.getJSONArray(userClass.getName()) != null) {
+					array = json.getJSONArray(userClass.getName());
+				} else {
+					array = new JSONArray();
+				}
+				json.put(userClass.getName(), array);
+			}
+
 			jsonObject.put("service", userClass.getName());
 			jsonObject.put("method", handlerMethod.getMethod().getName());
-			jsonObject.put("url", path);
+			jsonObject.put("url", addr + path);
 			MethodParameter[] methodParameters = handlerMethod.getMethodParameters();
-			JSONArray args=new JSONArray();
+			JSONArray args = new JSONArray();
 			for (MethodParameter methodParameter : methodParameters) {
 				args.add(methodParameter.getParameterType());
 			}
-			
-			jsonObject.put("args", args);
-			
+
+			jsonObject.put("argsType", args);
+
+			String[] split = path.split("/");
+			if (split.length > 4) {
+				jsonObject.put("group", split[1]);
+				jsonObject.put("version", split[2]);
+				jsonObject.put("serviceThin", split[3]);
+			}
+			array.add(jsonObject);
+
 			jsonObject.put("returnType", handlerMethod.getMethod().getReturnType());
-			jsonArray.add(jsonObject);
 
 		}
-		return new ResponseEntity().setMsg("welcome to dubbo-springmvc rest api!").setStatus(200).setResult(jsonArray);
+		return new ResponseEntity().setMsg("welcome to dubbo-springmvc rest api!").setStatus(200).setResult(json);
 	}
-	
 
 	public WebManager() {
 		super();
@@ -350,6 +386,4 @@ public class WebManager {
 		this.handlerMethods = handlerMethods;
 	}
 
-	
-	
 }
