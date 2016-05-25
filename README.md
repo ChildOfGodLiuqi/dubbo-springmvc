@@ -143,6 +143,13 @@ mvn install -Dmaven.test.skip=true
 			<scope>compile</scope>
 		</dependency>
 		
+		<!--如果需要websocket-->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-websocket</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+		
 		<!-- 如果要使用tomcat server -->
 		<dependency>
 			<groupId>org.apache.tomcat.embed</groupId>
