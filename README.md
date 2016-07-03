@@ -1,5 +1,5 @@
 #基于dubbo 扩展的springmvc插件,自动发布相关rest接口,零入侵现有代码.
-
+新项目地址:https://git.oschina.net/wuyu15255872976/dubbox.git
 	把spring(duubo)接入到http网关,基于springmvc实现
 	1.	自动注册到本地springmvc容器.
 	2.	完成参数注入与rest输出(json/xml),开放支持个性化设置
