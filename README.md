@@ -1,9 +1,4 @@
 #基于dubbo 扩展的springmvc插件
-[TOC]
-###支持所有springmvc 注解.
-
-	
-
 ###安装
 ````
 mvn install -Dmaven.test.skip=true
@@ -18,8 +13,6 @@ mvn install -Dmaven.test.skip=true
 ```
 
 ###example
-
-//实现类
 ```
 
 //接口
