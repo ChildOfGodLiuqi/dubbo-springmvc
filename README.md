@@ -19,7 +19,7 @@ mvn install -Dmaven.test.skip=true
 public class UserService{
 
     //可以不指定produce  默认会自动序列化成json
-    @RequestMapping(value="/{id}",method=RequestMethod.GET)
+    @RequestMapping(value="/{id}",method=RequestMethod.GET,consumes=MediaType.APPLICATION_JSON_VALUE)
     public User findById(@PathVariable("id") Integer id);
             
     //只接受请求头为application/json
@@ -56,6 +56,22 @@ public class UserServiceImpl{
     }
 
 }
+```
+
+
+###exmpale2 消费 普通http api.
+```
+//接口
+public class UserService{
+
+    //可以不指定produce  默认会自动序列化成json
+    @RequestMapping(value="/{id}",method=RequestMethod.GET,consumes=MediaType.APPLICATION_JSON_VALUE)
+    public User findById(@PathVariable("id") Integer id);
+ 
+}
+
+<dubbo:reference id="userService" interface="com.vcg.UserService" protocol="springmvc" url="springmvc://提供服务的server,可以非dubbo服务端" />
+
 ```
 
 
