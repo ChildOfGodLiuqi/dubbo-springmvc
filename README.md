@@ -85,7 +85,7 @@ public class UserService{
 
 ###增加了两个http容器 tomcat,jetty9
 ```
-//dubbo下仅支持 tomcat,tomcat9,dubbox 下支持 jetty,servlet,jetty9,tomcaat
+//dubbo下仅支持 tomcat,jetty9,dubbox 下支持 jetty,servlet,jetty9,tomcaat
 
 <!-- 如果要使用tomcat server -->
 <dubbo:protocol name="springmvc" server="tomcat" port="8080" />
