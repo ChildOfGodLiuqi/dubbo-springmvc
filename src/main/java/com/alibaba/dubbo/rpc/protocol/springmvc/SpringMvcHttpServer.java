@@ -3,6 +3,7 @@ package com.alibaba.dubbo.rpc.protocol.springmvc;
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.common.logger.Logger;
 import com.alibaba.dubbo.common.logger.LoggerFactory;
+import com.alibaba.dubbo.config.spring.ServiceBean;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.HttpHandler;
 import com.alibaba.dubbo.remoting.http.HttpServer;
@@ -11,6 +12,7 @@ import com.alibaba.dubbo.remoting.http.servlet.ServletManager;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.springmvc.util.SpringUtil;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
@@ -93,6 +95,7 @@ public class SpringMvcHttpServer {
     public void deploy(Class resourceDef) {
 
         try {
+
             // 反射SpringExtensionFactory 拿到所有的ApplicatonContext 通过class类型获取bean
             Set<Object> beans = SpringUtil.getBeans(resourceDef);
             for (Object bean : beans) {
@@ -129,7 +132,7 @@ public class SpringMvcHttpServer {
         Set<Method> methods = selectMethods(handler);
         for (Method method : methods) {
             RequestMappingInfo requestMappingInfo = getMappingForMethod(method, handler.getClass());
-            if(requestMappingInfo!=null){
+            if (requestMappingInfo != null) {
                 removeHandlerMethod(requestMappingInfo);
             }
         }
@@ -143,7 +146,7 @@ public class SpringMvcHttpServer {
             Method unregisterMapping = ReflectionUtils.findMethod(RequestMappingHandlerMapping.class, "unregisterMapping", Object.class);
             unregisterMapping.setAccessible(true);
             unregisterMapping.invoke(requestMappingInfo);
-        }else{
+        } else {
             handlerMethodsFiled.setAccessible(true);
             Map handlerMethods = (Map) handlerMethodsFiled.get(requestMapping);
             handlerMethods.remove(requestMapping);
