@@ -91,6 +91,7 @@ public class UserService{
 ```
 
 	
+	
 
 ###依赖jar
 
@@ -98,7 +99,7 @@ public class UserService{
 <dependency>
     <groupId>org.hibernate</groupId>
     <artifactId>hibernate-validator</artifactId>
-    <version>4.3.1.Final</version>
+    <version>5.2.4.Final</version>
 </dependency>
 
 <dependency>
@@ -107,10 +108,11 @@ public class UserService{
     <version>2.5.3</version>
 </dependency>
 
+<!-- 建议使用高版本 springmvc, 同样也支持 3.2.x版本 -->
 <dependency>
     <groupId>org.springframework</groupId>
     <artifactId>spring-webmvc</artifactId>
-    <version>4.1.7.RELEASE</version>
+    <version>4.3.2.RELEASE</version>
     <scope>compile</scope>
 </dependency>
 
@@ -161,5 +163,47 @@ public class UserService{
     <artifactId>fastjson</artifactId>
     <version>1.2.7</version>
 </dependency>
+
+
+###其他相关插件
+```
+基于dubbox增加了 springmvc,jsonrpc,原生thrift rpc,avro rpc组件.
+git: https://git.oschina.net/wuyu15255872976/dubbox.git
+
+增加spring-boot-starter-dubbo支持 
+git: https://git.oschina.net/wuyu15255872976/spring-boot-starter-dubbo.git
+
+dubbo http代理
+git:https://git.oschina.net/wuyu15255872976/dubbo-rpc-proxy.git
+
+
+feign-springmvc
+支持以springmvc注解描述出要调用的rest接口
+@RequestMapping(value="/user")
+public interface UserService {
+
+    @RequestMapping(value = "/{id}", method = RequestMethod.GET)
+    User selectByPrimaryKey( @PathVariable("id") Integer id);
+
+    @RequestMapping(value = "/list", method = RequestMethod.GET)
+    List<User> list();
+
+    @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
+    int deleteByPrimaryKey(@PathVariable("id") Integer id);
+
+    @RequestMapping(method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    int insert(@RequestBody User user);
+
+    @RequestMapping(method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    int updateByPrimaryKey(@RequestBody User user);
+
+
+
+}
+
+UserService commentService =SpringMvcFeign.target(UserService.class, "http://localhost:8080");
+
+git:https://git.oschina.net/wuyu15255872976/feign-springmvc.git
+
 
 ```
