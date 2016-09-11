@@ -1,6 +1,8 @@
 #基于dubbo 扩展的springmvc插件
 ###安装
+
 ````
+
 mvn install -Dmaven.test.skip=true
 
 <!-- dubbo-springmvc插件 -->
@@ -9,6 +11,7 @@ mvn install -Dmaven.test.skip=true
     <artifactId>dubbo-rpc-springmvc</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 </dependency>
+
 
 ```
 
@@ -56,10 +59,12 @@ public class UserServiceImpl{
     }
 
 }
+
 ```
 
 
 ###exmpale2 消费 普通http api.
+
 ```
 //接口
 public class UserService{
@@ -80,7 +85,7 @@ public class UserService{
 
 ###增加了两个http容器 tomcat,jetty9
 ```
-//dubbo下仅支持 tomcat,tomcat9,dubbox 下支持 jetty,servlet,jetty9,tomcat
+//dubbo下仅支持 tomcat,tomcat9,dubbox 下支持 jetty,servlet,jetty9,tomcaat
 
 <!-- 如果要使用tomcat server -->
 <dubbo:protocol name="springmvc" server="tomcat" port="8080" />
@@ -164,8 +169,13 @@ public class UserService{
     <version>1.2.7</version>
 </dependency>
 
+```
+
+
 
 ###其他相关插件
+
+
 ```
 基于dubbox增加了 springmvc,jsonrpc,原生thrift rpc,avro rpc组件.
 git: https://git.oschina.net/wuyu15255872976/dubbox.git
