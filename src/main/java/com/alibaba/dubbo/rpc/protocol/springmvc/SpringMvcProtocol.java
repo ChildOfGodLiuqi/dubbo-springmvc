@@ -86,9 +86,15 @@ public class SpringMvcProtocol extends AbstractProxyProtocol {
 
     @Override
     protected <T> T doRefer(Class<T> type, URL url) throws RpcException {
-        String api = "http://" + url.getHost() + ":" + url.getPort() + getContextPath(url);
+        int port = url.getPort();
         int timeout = url.getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
         int connections = url.getParameter(Constants.CONNECTIONS_KEY, 20);
+        String schema = "http://";
+        if (port == 443 || port == 8433){
+            schema = "https://";
+        }
+
+        String api = schema + url.getHost() + ":" + url.getPort() + getContextPath(url);
 
         //注册请求拦截器,请求前认证
         Set<RequestInterceptor> requestInterceptors = SpringUtil.getBeans(RequestInterceptor.class);
