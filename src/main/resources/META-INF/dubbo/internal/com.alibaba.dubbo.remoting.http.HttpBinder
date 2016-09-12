@@ -1,2 +1,3 @@
 jetty9=com.alibaba.dubbo.remoting.http.jetty9.Jetty9HttpBinder
 tomcat=com.alibaba.dubbo.remoting.http.tomcat.TomcatHttpBinder
+none=com.alibaba.dubbo.remoting.http.none.NoneBinder
