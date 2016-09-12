@@ -96,6 +96,9 @@ public class UserService{
 <!-- 如果要使用jetty9 server -->
 <dubbo:protocol name="springmvc" server="jetty9" port="8080" />
 
+<!-- 只注册服务,并不提供服务. 可以与springboot 结合,让springboot提供服务,dubbo负责注册发现服务 -->
+<dubbo:protocol name="springmvc" server="none" port="8080" />
+
 ```
 
 	
