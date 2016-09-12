@@ -17,46 +17,49 @@ mvn install -Dmaven.test.skip=true
 
 ###example
 ```
-
+git: https://github.com/wu191287278/dubbo-springmvc-example
 //接口
-public class UserService{
+public interface UserService{
 
     //可以不指定produce  默认会自动序列化成json
     @RequestMapping(value="/{id}",method=RequestMethod.GET)
     public User findById(@PathVariable("id") Integer id);
-            
+
     //只接受请求头为application/json
     @RequestMapping(value="/",method=RequestMethod.POST,consumes=MediaType.APPLICATION_JSON_VALUE)
     //只做简单返回
     public User insert(@RequestBody User user);
-            
+
     //注入request,response
-    @RequestMapping(value="/{id}",,method=RequestMethod.DELETE)
-    public String delete(@PathVariable("id") Integer id);
-    
+    @RequestMapping(value="/{id}",method=RequestMethod.DELETE)
+    public Integer delete(@PathVariable("id") Integer id);
+
     //注入request,response
-    @RequestMapping(value="/",,method=RequestMethod.PUT,consumes=MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value="/",method=RequestMethod.PUT,consumes=MediaType.APPLICATION_JSON_VALUE)
     public User update(@RequestBody User user);
- 
+
 }
 	
 //实现类
-public class UserServiceImpl{
-    public Integer findById(@PathVariable("id") Integer id){
-        return id;
-    }
-            
-    public User insert(@RequestBody User user){
-            return user;
-    }
-            
-    public String delete(@PathVariable("id") Integer id){
-        return id;
-    }
-    
-    public User update(@RequestBody User user){
-        return user;
-    }
+@RequestMapping("/user")
+@RestController
+public class UserServiceImpl implements UserService {
+	public User findById(@PathVariable("id") Integer id) {
+		return new User()
+				.setId(id);
+	}
+
+	public User insert(@RequestBody User user) {
+		return user;
+	}
+
+	public Integer delete(@PathVariable("id") Integer id) {
+		return id;
+	}
+
+	public User update(@RequestBody User user) {
+		return user;
+	}
 
 }
 
