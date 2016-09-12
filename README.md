@@ -22,13 +22,13 @@ mvn install -Dmaven.test.skip=true
 public class UserService{
 
     //可以不指定produce  默认会自动序列化成json
-    @RequestMapping(value="/{id}",method=RequestMethod.GET,consumes=MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value="/{id}",method=RequestMethod.GET)
     public User findById(@PathVariable("id") Integer id);
             
     //只接受请求头为application/json
     @RequestMapping(value="/",method=RequestMethod.POST,consumes=MediaType.APPLICATION_JSON_VALUE)
     //只做简单返回
-    public User isnert(@RequestBody User user);
+    public User insert(@RequestBody User user);
             
     //注入request,response
     @RequestMapping(value="/{id}",,method=RequestMethod.DELETE)
@@ -46,7 +46,7 @@ public class UserServiceImpl{
         return id;
     }
             
-    public User isnert(@RequestBody User user){
+    public User insert(@RequestBody User user){
             return user;
     }
             
