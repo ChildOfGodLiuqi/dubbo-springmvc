@@ -6,6 +6,7 @@ import com.alibaba.dubbo.common.utils.StringUtils;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.AbstractProxyProtocol;
+import com.alibaba.dubbo.rpc.protocol.springmvc.exception.SpringMvcErrorDecoder;
 import com.alibaba.dubbo.rpc.protocol.springmvc.message.HessainHttpMessageConverter;
 import com.alibaba.dubbo.rpc.protocol.springmvc.message.MessageConverters;
 import com.alibaba.dubbo.rpc.protocol.springmvc.support.*;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.alibaba.dubbo.rpc.protocol.springmvc.support.SpringMvcFeign.target;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -90,7 +92,7 @@ public class SpringMvcProtocol extends AbstractProxyProtocol {
         int timeout = url.getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
         int connections = url.getParameter(Constants.CONNECTIONS_KEY, 20);
         String schema = "http://";
-        if (port == 443 || port == 8433){
+        if (port == 443 || port == 8433) {
             schema = "https://";
         }
 
@@ -103,6 +105,7 @@ public class SpringMvcProtocol extends AbstractProxyProtocol {
                 .requestInterceptors(requestInterceptors)
                 .client(new ApacheHttpClient(SpringMvcFeign.getDefaultHttpClientPool(connections, timeout, 0, true)))
                 .retryer(new Retryer.Default(100, SECONDS.toMillis(1), 0))
+                .errorDecoder(new SpringMvcErrorDecoder())
                 .target(type, api);
 
     }

@@ -8,4 +8,5 @@
 
     <mvc:annotation-driven/>
 
+    <bean id="springMvcExceptionHandler" class="com.alibaba.dubbo.rpc.protocol.springmvc.exception.SpringMvcExceptionHandler"/>
 </beans>
