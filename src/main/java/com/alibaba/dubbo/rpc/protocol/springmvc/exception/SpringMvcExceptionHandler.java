@@ -18,12 +18,12 @@ public class SpringMvcExceptionHandler implements HandlerExceptionResolver {
     public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         JSONObject view = new JSONObject();
         view.put("message", ex.toString());
-        view.put("status",500);
+        view.put("status", 500);
         try {
             response.setContentType("application/json;charset=utf-8");
             response.getWriter().write(view.toJSONString());
         } catch (IOException e) {
-            ex.printStackTrace();
+            e.printStackTrace();
         }
         return null;
     }
