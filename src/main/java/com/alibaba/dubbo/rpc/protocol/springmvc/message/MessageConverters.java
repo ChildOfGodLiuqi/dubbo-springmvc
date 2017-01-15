@@ -7,7 +7,6 @@ import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.feed.AtomFeedHttpMessageConverter;
 import org.springframework.http.converter.feed.RssChannelHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJacksonHttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.http.converter.xml.Jaxb2RootElementHttpMessageConverter;
 import org.springframework.http.converter.xml.SourceHttpMessageConverter;
@@ -66,10 +65,6 @@ public class MessageConverters {
         if (jackson2Present) {
             this.messageConverters.add(new MappingJackson2HttpMessageConverter());
         }
-        else if (jacksonPresent) {
-            this.messageConverters.add(new MappingJacksonHttpMessageConverter());
-        }
-
 
     }
 

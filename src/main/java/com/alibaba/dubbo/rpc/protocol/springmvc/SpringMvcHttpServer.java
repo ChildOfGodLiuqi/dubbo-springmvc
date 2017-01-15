@@ -1,9 +1,7 @@
 package com.alibaba.dubbo.rpc.protocol.springmvc;
 
 import com.alibaba.dubbo.common.URL;
-import com.alibaba.dubbo.common.logger.Logger;
-import com.alibaba.dubbo.common.logger.LoggerFactory;
-import com.alibaba.dubbo.config.spring.ServiceBean;
+import com.alibaba.dubbo.config.spring.extension.SpringExtensionFactory;
 import com.alibaba.dubbo.remoting.http.HttpBinder;
 import com.alibaba.dubbo.remoting.http.HttpHandler;
 import com.alibaba.dubbo.remoting.http.HttpServer;
@@ -12,15 +10,10 @@ import com.alibaba.dubbo.remoting.http.servlet.ServletManager;
 import com.alibaba.dubbo.rpc.RpcContext;
 import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.protocol.springmvc.util.SpringUtil;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.filter.HttpPutFormContentFilter;
 import org.springframework.web.method.HandlerMethodSelector;
 import org.springframework.web.servlet.DispatcherServlet;
-import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -31,7 +24,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Enumeration;
 import java.util.Map;
@@ -70,9 +62,9 @@ public class SpringMvcHttpServer {
 
 
         try {
-            dispatcher.setContextConfigLocation("classpath:META-INF/dubbo/spring/dubbo-springmvc.xml");
+            dispatcher.setContextConfigLocation("classpath:META-INF/dubbo/dubbo-springmvc.xml");
             dispatcher.init(new SimpleServletConfig(servletContext));
-
+            SpringExtensionFactory.addApplicationContext(dispatcher.getWebApplicationContext());
         } catch (Exception e) {
             throw new RpcException(e);
         }
@@ -95,7 +87,6 @@ public class SpringMvcHttpServer {
     public void deploy(Class resourceDef) {
 
         try {
-
             // 反射SpringExtensionFactory 拿到所有的ApplicatonContext 通过class类型获取bean
             Set<Object> beans = SpringUtil.getBeans(resourceDef);
             for (Object bean : beans) {
@@ -172,6 +163,10 @@ public class SpringMvcHttpServer {
             }
         });
         return methods;
+    }
+
+    public <T> T getBean(Class<T> clazz) {
+        return dispatcher.getWebApplicationContext().getBean(clazz);
     }
 
     private static class SimpleServletConfig implements ServletConfig {

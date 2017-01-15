@@ -83,11 +83,92 @@ public class UserService{
 
 ```
 
+---
+
+###熔断
+```
+@Api(fallback=UserServiceExtendFallback.class)
+public interface UserService{
+
+    //可以不指定produce  默认会自动序列化成json
+    @RequestMapping(value="/{id}",method=RequestMethod.GET,consumes=MediaType.APPLICATION_JSON_VALUE)
+    public User findById(@PathVariable("id") Integer id);
+ 
+}
+
+public class UserServiceExtendFallback implements UserService {
+
+    //fallbakc data
+    private User user =new User(1,"xxx");
+
+    public User findById(@PathVariable("id") Integer id){
+        return user;
+    }
+}
+```
+
+---
+
+###oauth2
+配置文件:
+```
+1. resources/META-INF/dubbo/oauth2/oauth2.properties
+2. OAuth2Property spring bean
+
+以上两种都可以完成配置
+```
+
+服务端:
+
+```
+<dubbo:protocol name="springmvc" server="tomcat" port="8080"/>
+
+<!--验证权限 临时 使用 token作为所需权限 token="ROLE_USER,ROLE_ADMIN"-->
+<bean class="com.alibaba.dubbo.demo.provider.UserServiceImpl" id="userService" />
+<dubbo:service interface="com.alibaba.dubbo.demo.UserService" filter="oAuth2Filter" ref="userService" token="ROLE_USER,ROLE_ADMIN" />
+
+```
+
+客户端:
+```
+<!--加入 权限验证 -->
+<!--<dubbo:reference id="demoService" interface="com.alibaba.dubbo.demo.DemoService" filter="oAuth2Filter"/>-->
+```
+
+---
+
+###dubbo代理,把dubbo服务转化成rest服务
+
+```
+<!--代理 Dubbo,并转化为Rest服务 可通过http方式调用dubbo服务-->
+<bean class="com.alibaba.dubbo.rpc.protocol.springmvc.proxy.ProxyServiceImpl" id="proxyService"/>
+
+<!--如果本身是web服务,可以省略这一步.该步骤是为了初始化springmvc容器-->
+<dubbo:service interface="com.alibaba.dubbo.rpc.protocol.springmvc.proxy.ProxyService" ref="proxyService" protocol="springmvc"/>
+```
+
+调用示例:
+```
+/**
+ * http://localhost:8080/proxy/
+ * POST,PUT,DELETE
+ * 调用示例
+ * {
+ * "service":"com.alibaba.dubbo.demo.DemoService",
+ * "method":"sayHello",
+ * "group":"defaultGroup",//可以不写
+ * "version":"1.0" ,//可以不写
+ * "argsType":["java.lang.String"],
+ * "args":["wuyu"]
+ * }
+ */
+```
+
+---
 
 
 
-
-###增加了两个http容器 tomcat,jetty9
+###增加了两个http容器 tomcat,jetty9,b
 ```
 //dubbo下仅支持 tomcat,jetty9,dubbox 下支持 jetty,servlet,jetty9,tomcaat
 
@@ -130,10 +211,18 @@ public class UserService{
 
 <!-- springmvc 注解解析构建请求 -->
 <dependency>
-    <groupId>com.netflix.feign</groupId>
+    <groupId>io.github.openfeign</groupId>
     <artifactId>feign-core</artifactId>
-    <version>8.16.2</version>
+    <version>9.3.1</version>
 </dependency>
+
+<!-- hystrix 熔断 -->
+<dependency>
+    <groupId>io.github.openfeign</groupId>
+    <artifactId>feign-hystrix</artifactId>
+    <version>9.3.1</version>
+</dependency>
+
 
 
 <!-- 如果要使用tomcat server -->
@@ -179,54 +268,8 @@ public class UserService{
 <dependency>
     <groupId>org.apache.httpcomponents</groupId>
     <artifactId>httpclient</artifactId>
+    <version>4.5.2</version>
 </dependency>
-
-
-```
-
-
-
-###其他相关插件
-
-
-```
-基于dubbox增加了 springmvc,jsonrpc,原生thrift rpc,avro rpc组件.
-git: https://git.oschina.net/wuyu15255872976/dubbox.git
-
-增加spring-boot-starter-dubbo支持 
-git: https://git.oschina.net/wuyu15255872976/spring-boot-starter-dubbo.git
-
-dubbo http代理
-git:https://git.oschina.net/wuyu15255872976/dubbo-rpc-proxy.git
-
-
-feign-springmvc
-支持以springmvc注解描述出要调用的rest接口
-@RequestMapping(value="/user")
-public interface UserService {
-
-    @RequestMapping(value = "/{id}", method = RequestMethod.GET)
-    User selectByPrimaryKey( @PathVariable("id") Integer id);
-
-    @RequestMapping(value = "/list", method = RequestMethod.GET)
-    List<User> list();
-
-    @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
-    int deleteByPrimaryKey(@PathVariable("id") Integer id);
-
-    @RequestMapping(method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    int insert(@RequestBody User user);
-
-    @RequestMapping(method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    int updateByPrimaryKey(@RequestBody User user);
-
-
-
-}
-
-UserService commentService =SpringMvcFeign.target(UserService.class, "http://localhost:8080");
-
-git:https://git.oschina.net/wuyu15255872976/feign-springmvc.git
 
 
 ```
