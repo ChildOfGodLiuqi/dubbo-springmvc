@@ -150,7 +150,7 @@ public class UserServiceExtendFallback implements UserService {
 调用示例:
 ```
 /**
- * http://localhost:8080/proxy/
+ * http://localhost:8080/
  * POST,PUT,DELETE
  * 调用示例
  * {
